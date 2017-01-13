@@ -1,0 +1,80 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "count": {
+            "type": "int",
+            "defaultValue": "4"
+        },
+        "newVMName": {
+            "type": "string",
+            "defaultValue": "studentlabvm"
+        },
+        "labName": {
+            "type": "string"
+        },
+        "size": {
+            "type": "string",
+            "defaultValue": "Standard_DS1_v2"
+        },
+        "expirationDate": {
+            "type": "string"
+        },
+        "userName": {
+            "type": "string",
+            "defaultValue": "bocconiUser"
+        },
+        "password": {
+            "type": "securestring"
+        }
+    },
+    "variables": {
+        "labSubnetName": "[concat(variables('labVirtualNetworkName'), 'Subnet')]",
+        "labVirtualNetworkId": "[resourceId('Microsoft.DevTestLab/labs/virtualnetworks', parameters('labName'), variables('labVirtualNetworkName'))]",
+        "labVirtualNetworkName": "[concat('Dtl', parameters('labName'))]",
+        "vmId": "[resourceId ('Microsoft.DevTestLab/labs/virtualmachines', parameters('labName'), parameters('newVMName'))]",
+        "vmName": "[concat(parameters('labName'), '/', parameters('newVMName'))]"
+    },
+    "resources": [
+        {
+            "apiVersion": "2016-05-15",
+            "type": "Microsoft.DevTestLab/labs/virtualmachines",
+            "name": "[concat(variables('vmName'), copyIndex())]",
+            "copy": {
+                "name": "vmcopy",
+                "count": "[parameters('count')]"
+            },
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "labVirtualNetworkId": "[variables('labVirtualNetworkId')]",
+                "notes": "Visual Studio Community 2015 Update 3 with Azure SDK 2.9 on Windows Server 2012 R2",
+                "galleryImageReference": {
+                    "offer": "VisualStudio",
+                    "publisher": "MicrosoftVisualStudio",
+                    "sku": "VS-2015-Comm-VSU3-AzureSDK-291-WS2012R2",
+                    "osType": "Windows",
+                    "version": "latest"
+                },
+                "size": "[parameters('size')]",
+                "userName": "[parameters('userName')]",
+                "password": "[parameters('password')]",
+                "isAuthenticationWithSshKey": false,
+                "labSubnetName": "[variables('labSubnetName')]",
+                "disallowPublicIpAddress": true,
+                "storageType": "Premium",
+                "allowClaim": true,
+                "expirationDate": "[parameters('expirationDate')]",
+                "networkInterface": {
+                    "sharedPublicIpAddressConfiguration": {
+                        "inboundNatRules": [
+                            {
+                                "transportProtocol": "tcp",
+                                "backendPort": 3389
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    ]
+}
