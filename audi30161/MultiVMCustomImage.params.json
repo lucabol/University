@@ -3,19 +3,19 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "count": {
-            "value": 40
+            "value": 4
         },
         "newVMName": {
-            "value": "bocconi"
+            "value": "Audi"
         },
         "labName": {
-            "value": "Acc30005"
-        },
-        "password": {
-            "value": "Bocconi1"
+            "value": "Audi30161"
         },
         "expirationDate": {
-            "value": "2017-01-14"
+            "value": "2017-01-30"
+        },
+        "imageName": {
+            "value": "bocconi"
         }
     }
 }

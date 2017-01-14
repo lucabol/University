@@ -4,7 +4,7 @@
     "parameters": {
         "count": {
             "type": "int",
-            "defaultValue": "4"
+            "defaultValue": "1"
         },
         "newVMName": {
             "type": "string",
@@ -15,17 +15,13 @@
         },
         "size": {
             "type": "string",
-            "defaultValue": "Standard_DS1_v2"
+            "defaultValue": "Standard_DS2"
         },
         "expirationDate": {
             "type": "string"
         },
-        "userName": {
-            "type": "string",
-            "defaultValue": "bocconiUser"
-        },
-        "password": {
-            "type": "securestring"
+        "imageName": {
+            "type": "string"
         }
     },
     "variables": {
@@ -33,7 +29,8 @@
         "labVirtualNetworkId": "[resourceId('Microsoft.DevTestLab/labs/virtualnetworks', parameters('labName'), variables('labVirtualNetworkName'))]",
         "labVirtualNetworkName": "[concat('Dtl', parameters('labName'))]",
         "vmId": "[resourceId ('Microsoft.DevTestLab/labs/virtualmachines', parameters('labName'), parameters('newVMName'))]",
-        "vmName": "[concat(parameters('labName'), '/', parameters('newVMName'))]"
+        "vmName": "[concat(parameters('labName'), '/', parameters('newVMName'))]",
+        "imageId": "[resourceId ('Microsoft.DevTestLab/labs/customimages', parameters('labName'), parameters('imageName'))]"
     },
     "resources": [
         {
@@ -47,17 +44,8 @@
             "location": "[resourceGroup().location]",
             "properties": {
                 "labVirtualNetworkId": "[variables('labVirtualNetworkId')]",
-                "notes": "Visual Studio Community 2015 Update 3 with Azure SDK 2.9 on Windows Server 2012 R2",
-                "galleryImageReference": {
-                    "offer": "VisualStudio",
-                    "publisher": "MicrosoftVisualStudio",
-                    "sku": "VS-2015-Comm-VSU3-AzureSDK-291-WS2012R2",
-                    "osType": "Windows",
-                    "version": "latest"
-                },
+                "customImageId": "[variables('imageId')]",
                 "size": "[parameters('size')]",
-                "userName": "[parameters('userName')]",
-                "password": "[parameters('password')]",
                 "isAuthenticationWithSshKey": false,
                 "labSubnetName": "[variables('labSubnetName')]",
                 "disallowPublicIpAddress": true,

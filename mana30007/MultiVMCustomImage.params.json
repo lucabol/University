@@ -3,19 +3,19 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "count": {
-            "value": 3
+            "value": 4
         },
         "newVMName": {
-            "value": "bocconi"
+            "value": "Mana"
         },
         "labName": {
             "value": "Mana30007"
         },
-        "password": {
-            "value": "Bocconi1"
-        },
         "expirationDate": {
-            "value": "2017-01-14"
+            "value": "2017-01-30"
+        },
+        "imageName": {
+            "value": "bocconi"
         }
     }
 }
