@@ -49,7 +49,7 @@
                 "isAuthenticationWithSshKey": false,
                 "labSubnetName": "[variables('labSubnetName')]",
                 "disallowPublicIpAddress": true,
-                "storageType": "Premium",
+                "storageType": "Standard",
                 "allowClaim": true,
                 "expirationDate": "[parameters('expirationDate')]",
                 "networkInterface": {

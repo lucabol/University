@@ -2,11 +2,11 @@
 
 # Values to change
 $subscriptionId = "818e194a-9bee-486f-9854-03b3be61170b"
-$labResourceGroup = "stat30001rg815764"
-$labName = "Stat30001"
+$labResourceGroup = "mana30007rg605919"
+$labName = "Mana30007"
 
 # Login to your Azure account
-Login-AzureRmAccount
+Select-AzureRmProfile -Path "C:\Users\lucabol\Documents\AzCred.txt"
 
 # Select the Azure subscription that contains the lab. This step is optional
 # if you have only one subscription.
