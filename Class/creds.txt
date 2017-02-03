@@ -1,0 +1,1 @@
+Use Get-Credentials command to populate this file with appropriate subscription credentials
