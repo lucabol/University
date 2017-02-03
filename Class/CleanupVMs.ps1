@@ -1,8 +1,5 @@
 param
 (
-    [Parameter(Mandatory=$true, HelpMessage="The name of the Dev Test Lab resource group")]
-    [string] $ResourceGroupName,
-
     [Parameter(Mandatory=$true, HelpMessage="The name of the Dev Test Lab to clean up")]
     [string] $LabName
 )
