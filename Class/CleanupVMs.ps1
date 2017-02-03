@@ -18,7 +18,7 @@ Select-AzureRmProfile -Path $Credential_Path
 $SubscriptionIDPath = Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "subId.txt"
 Write-Output "Subscription ID File: " $SubscriptionIDPath
 if (! (Test-Path $SubscriptionIDPath)) {
-    Write-Error "##[ERROR]Subscription ID file missing. Exiting script..."
+    Write-Error "###[ERROR]Subscription ID file missing. Exiting script..."
     exit
 }
 $SubscriptionID = Get-Content -Path $SubscriptionIDPath
@@ -39,8 +39,6 @@ $deleteVmBlock = {
 # Iterate over all the VMs and delete any that we created
 foreach ($currentVm in $allVms){        
     $vmName = $currentVm.ResourceName
-    $provisioningState = (Get-AzureRmResource -ResourceId $currentVm.ResourceId).Properties.ProvisioningState
-
     Write-Output "Starting job to delete VM $vmName"
     $jobs += Start-Job -ScriptBlock $deleteVmBlock -ArgumentList $Credential_Path, $vmName, $currentVm.ResourceId    
 }

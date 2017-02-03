@@ -1,7 +1,7 @@
 param 
 (
     [Parameter(Mandatory=$false, HelpMessage="The path to the Deployment Template File ")]
-    [string] $TemplatePath = "c:\src\repos\University\Class\MultiVMCustomImageTemplate.json",
+    [string] $TemplatePath = ".\MultiVMCustomImageTemplate.json",
 
     # Instance Count
     [Parameter(Mandatory=$true, HelpMessage="Number of instances to create")]
