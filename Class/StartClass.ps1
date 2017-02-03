@@ -54,8 +54,14 @@ Select-AzureRmSubscription -SubscriptionId $SubscriptionID | Out-Null
 #   b) has not been cleaned up 
 #   thus the script should exit
 # 
-#Write-Verbose "Checking for existing VMs in $LabName"
-#$existingVMs = Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs/virtualMachines" -ResourceNameContains $newVMName
+Write-Verbose "Checking for existing VMs in $LabName"
+$existingVMs = (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs/virtualMachines" -ResourceNameContains $newVMName).Count
+
+if ($existingVMs -ne 0) {
+    Write-Error "Lab $LabName contains existing VMs. Please clean up lab before creating new VMs"
+    Exit 1
+}
+
 
 # Set the expiration Date
 $UniversalDate = Get-Date
