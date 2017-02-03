@@ -15,10 +15,6 @@ param
     [Parameter(Mandatory=$true, HelpMessage="Name of base image in lab")]
     [string] $BaseImage,
 
-    # Expiration Date
-    [Parameter(Mandatory=$true, HelpMessage="Date of VM expiration")]
-    [string] $ExpirationDate,
-
     # Image Size
     [Parameter(Mandatory=$false, HelpMessage="Size of VM image")]
     [string] $ImageSize = "Standard_DS2",    
@@ -59,10 +55,9 @@ Select-AzureRmSubscription -SubscriptionId $SubscriptionID
 #$existingVMs = Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs/virtualMachines" -ResourceNameContains $newVMName
 
 # Set the expiration Date
-#$ExpirationDate = (Get-Date).AddDays(1) 
-#$FormatedExpDate = $ExpirationDate.ToString("yyyy-MM-dd")
+$ExpirationDate = $UniversalDate.ToUniversalTime().AddDays(1).ToString("yyyy-MM-dd")
 Write-Output "Expiration Date: $ExpirationDate"
-#Write-Output "Formatted Expiration Date: $FormatedExpDate"
+
 
 Write-Output "Starting Deployment for lab $LabName"
 $parameters = @{}
