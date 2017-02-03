@@ -4,6 +4,9 @@ param
     [string] $LabName
 )
 
+# Stops at the first error instead of continuing and potentially messing up things
+$global:erroractionpreference = 1
+
 # Load the credentials
 $Credential_Path =  Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "creds.txt"
 Write-Output "Credentials File: " $Credential_Path

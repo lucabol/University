@@ -24,12 +24,15 @@ param
     [string] $newVMName = "studentlabvm"    
 )
 
+# Stops at the first error instead of continuing and potentially messing up things
+$global:erroractionpreference = 1
+
 # Load the credentials
 $Credential_Path =  Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "creds.txt"
 Write-Output "Credentials File: $Credential_Path"
 if (! (Test-Path $Credential_Path)) {
     Write-Error "Credential files missing. Exiting script..."
-    exit
+    exit 1
 }
 
 Select-AzureRmProfile -Path $Credential_Path
@@ -39,7 +42,7 @@ $SubscriptionIDPath = Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path
 Write-Output "Subscription ID File: $SubscriptionIDPath"
 if (! (Test-Path $SubscriptionIDPath)) {
     Write-Error "Subscription ID file missing. Exiting script..."
-    exit
+    exit 1
 }
 $SubscriptionID = Get-Content -Path $SubscriptionIDPath
 Write-Output "SubscriptionID: $SubscriptionID"
