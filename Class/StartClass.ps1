@@ -1,7 +1,7 @@
 param 
 (
     [Parameter(Mandatory=$false, HelpMessage="The path to the Deployment Template File ")]
-    [string] $TemplatePath = "c:\src\repos\University\Class\MultiVMCustomImageTemplate.json",
+    [string] $TemplatePath = ".\MultiVMCustomImageTemplate.json",
 
     # Instance Count
     [Parameter(Mandatory=$true, HelpMessage="Number of instances to create")]
@@ -55,6 +55,7 @@ Select-AzureRmSubscription -SubscriptionId $SubscriptionID
 #$existingVMs = Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs/virtualMachines" -ResourceNameContains $newVMName
 
 # Set the expiration Date
+$UniversalDate = Get-Date
 $ExpirationDate = $UniversalDate.ToUniversalTime().AddDays(1).ToString("yyyy-MM-dd")
 Write-Output "Expiration Date: $ExpirationDate"
 

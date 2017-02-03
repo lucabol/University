@@ -9,13 +9,13 @@
             "value": "Stat"
         },
         "labName": {
-            "value": "Stat30001"
+            "value": "Stats"
         },
         "expirationDate": {
             "value": "2017-01-30"
         },
         "imageName": {
-            "value": "bocconi"
+            "value": "UnivImage"
         }
     }
 }
