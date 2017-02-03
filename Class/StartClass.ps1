@@ -1,3 +1,4 @@
+[cmdletbinding()]
 param 
 (
     [Parameter(Mandatory=$false, HelpMessage="The path to the Deployment Template File ")]
@@ -24,26 +25,28 @@ param
     [string] $newVMName = "studentlabvm"    
 )
 
+# Stops at the first error instead of continuing and potentially messing up things
+$global:erroractionpreference = 1
+
 # Load the credentials
 $Credential_Path =  Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "creds.txt"
-Write-Output "Credentials File: $Credential_Path"
+Write-Verbose "Credentials File: $Credential_Path"
 if (! (Test-Path $Credential_Path)) {
     Write-Error "Credential files missing. Exiting script..."
-    exit
+    exit 1
 }
 
-Select-AzureRmProfile -Path $Credential_Path
+Select-AzureRmProfile -Path $Credential_Path | Out-Null
 
 # Set the Subscription ID
 $SubscriptionIDPath = Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "subID.txt"
-Write-Output "Subscription ID File: $SubscriptionIDPath"
+Write-Verbose "Subscription ID File: $SubscriptionIDPath"
 if (! (Test-Path $SubscriptionIDPath)) {
     Write-Error "Subscription ID file missing. Exiting script..."
-    exit
+    exit 1
 }
 $SubscriptionID = Get-Content -Path $SubscriptionIDPath
-Write-Output "SubscriptionID: $SubscriptionID"
-Select-AzureRmSubscription -SubscriptionId $SubscriptionID
+Select-AzureRmSubscription -SubscriptionId $SubscriptionID | Out-Null
 
 # Check to see if any VMs already exist in the lab. 
 # Assume if ANY VMs exist then 
@@ -51,15 +54,16 @@ Select-AzureRmSubscription -SubscriptionId $SubscriptionID
 #   b) has not been cleaned up 
 #   thus the script should exit
 # 
-#Write-Output "Checking for existing VMs in $LabName"
+#Write-Verbose "Checking for existing VMs in $LabName"
 #$existingVMs = Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs/virtualMachines" -ResourceNameContains $newVMName
 
 # Set the expiration Date
+$UniversalDate = Get-Date
 $ExpirationDate = $UniversalDate.ToUniversalTime().AddDays(1).ToString("yyyy-MM-dd")
-Write-Output "Expiration Date: $ExpirationDate"
+Write-Verbose "Expiration Date: $ExpirationDate"
 
 
-Write-Output "Starting Deployment for lab $LabName"
+Write-Verbose "Starting Deployment for lab $LabName"
 $parameters = @{}
 $parameters.Add("count",$VMCount)
 $parameters.Add("labName",$LabName)
@@ -74,8 +78,9 @@ $ResourceGroupName = (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/l
 $vmDeployResult = New-AzureRmResourceGroupDeployment -Name "Deployment_$LabName" -ResourceGroup $ResourceGroupName -TemplateFile $TemplatePath -TemplateParameterObject $parameters
 
 if ($vmDeployResult.ProvisioningState -eq "Succeeded") {
-    Write-Output "Deployment completed successfully"   
+    Write-Verbose "Deployment completed successfully"   
 }
 else {
     Write-Error "##[error]Deploying VMs to lab $LabName failed"
+    exit 1
 }
