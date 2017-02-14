@@ -26,12 +26,16 @@ param
 )
 
 # Stops at the first error instead of continuing and potentially messing up things
-$global:erroractionpreference = 1
+#$global:erroractionpreference = 1
+Write-Verbose "Begin Process"
+$startTime = (Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmss")
+$deploymentName = "Deployment_$LabName_$startTime"
 
 # Load the credentials
 $Credential_Path =  Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "creds.txt"
 Write-Verbose "Credentials File: $Credential_Path"
 if (! (Test-Path $Credential_Path)) {
+    # Fatal error encountered. Exit Script    
     Write-Error "Credential files missing. Exiting script..."
     exit 1
 }
@@ -42,11 +46,14 @@ Select-AzureRmProfile -Path $Credential_Path | Out-Null
 $SubscriptionIDPath = Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "subID.txt"
 Write-Verbose "Subscription ID File: $SubscriptionIDPath"
 if (! (Test-Path $SubscriptionIDPath)) {
+    # Fatal error encountered. Log Error/Notify and Exit Script
     Write-Error "Subscription ID file missing. Exiting script..."
-    exit 1
+    exit 1    
 }
 $SubscriptionID = Get-Content -Path $SubscriptionIDPath
 Select-AzureRmSubscription -SubscriptionId $SubscriptionID | Out-Null
+
+# Do we need to check if the Subscription is correct selected?
 
 # Check to see if any VMs already exist in the lab. 
 # Assume if ANY VMs exist then 
@@ -58,18 +65,19 @@ Write-Verbose "Checking for existing VMs in $LabName"
 $existingVMs = (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs/virtualMachines" -ResourceNameContains $newVMName).Count
 
 if ($existingVMs -ne 0) {
+    # Fatal error encountered. Log Error/Notify and Exit Script
     Write-Error "Lab $LabName contains $existingVMs existing VMs. Please clean up lab before creating new VMs"
     Exit 1
 }
 
+# Result object to return
+$result = @{}
 
 # Set the expiration Date
-$UniversalDate = Get-Date
-$ExpirationDate = $UniversalDate.ToUniversalTime().AddDays(1).ToString("yyyy-MM-dd")
+$UniversalDate = (Get-Date).ToUniversalTime()
+$ExpirationDate = $UniversalDate.AddDays(1).ToString("yyyy-MM-dd")
 Write-Verbose "Expiration Date: $ExpirationDate"
 
-
-Write-Verbose "Starting Deployment for lab $LabName"
 $parameters = @{}
 $parameters.Add("count",$VMCount)
 $parameters.Add("labName",$LabName)
@@ -81,12 +89,49 @@ $parameters.Add("imageName", $BaseImage)
 $ResourceGroupName = (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs" -ResourceNameContains $LabName).ResourceGroupName
 
 # deploy resources via template
-$vmDeployResult = New-AzureRmResourceGroupDeployment -Name "Deployment_$LabName" -ResourceGroup $ResourceGroupName -TemplateFile $TemplatePath -TemplateParameterObject $parameters
+try {
+    Write-Verbose "Starting Deployment $deploymentName for lab $LabName"
+    $vmDeployResult = New-AzureRmResourceGroupDeployment -Name $deploymentName -ResourceGroup $ResourceGroupName -TemplateFile $TemplatePath -TemplateParameterObject $parameters 
+} 
+catch {
+    $result.errorCode = $_.Exception.GetType().FullName
+    $result.errorMessage = $_.Exception.Message
+}
+finally {
+    #Even if we got an error from the deployment call, get the deployment operation statuses for more invformation
+    $ops = Get-AzureRmResourceGroupDeploymentOperation -DeploymentName $deploymentName -SubscriptionId $SubscriptionID -ResourceGroupName $ResourceGroupName
+    
+    $deploymentEval = ($ops | Where-Object {$_.properties.provisioningOperation -eq "EvaluateDeploymentOutput"}).Properties
+    
+    $result.statusCode = $deploymentEval.statusCode
+    $result.statusMessage = $deploymentEval.statusMessage
 
-if ($vmDeployResult.ProvisioningState -eq "Succeeded") {
-    Write-Verbose "Deployment completed successfully"   
+    $failedtasks = @()
+    $succeededtasks = @()
+
+    # process each deployment operation. separate into succeeded and failed buckets    
+    ($ops | Where-Object {$_.properties.provisioningOperation -ne "EvaluateDeploymentOutput"}).Properties | ForEach-Object {        
+        $task = @{}
+        $task.name = $_.targetResource.ResourceName
+        $task.type = $_.targetResource.ResourceType
+        $task.statusCode = $_.targetResource.statusCode
+        $task.statusMessage= $_.targetResource.statusMessage
+        if ($_.provisioningState -eq "Succeeded") {                
+            $succeededtasks += $task
+        } else {
+            $failedtasks += $task
+        }
+    }
+
+    $result.Succeeded = $succeededtasks
+    $result.Failed = $failedtasks
+    
+    Write-Verbose "Status for VM creation in lab $($LabName): $($result.statusCode)"
+    Write-Verbose "Target VMs: $VMCount"
+    Write-Verbose "VMs Succesfully created: $($result.Succeeded.Count)"
+    Write-Verbose "VMs Failed: $($result.Failed.Count)"
+    
 }
-else {
-    Write-Error "##[error]Deploying VMs to lab $LabName failed"
-    exit 1
-}
+
+Write-Verbose "Process complete"
+return $result
