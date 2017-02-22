@@ -2,30 +2,23 @@
 param
 (
     [Parameter(Mandatory=$true, HelpMessage="The name of the Dev Test Lab to clean up")]
-    [string] $LabName
+    [string] $LabName,
+
+    # Credential path
+    [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure credentials")]
+    [string] $credentialPath = "$env:APPDATA\AzProfile.txt"
 )
 
 # Stops at the first error instead of continuing and potentially messing up things
 $global:erroractionpreference = 1
 
 # Load the credentials
-$Credential_Path =  Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "creds.txt"
-Write-Verbose "Credentials File: $Credential_Path"
-if (! (Test-Path $Credential_Path)) {
+Write-Verbose "Credentials File: $credentialPath"
+if (! (Test-Path $credentialPath)) {
     Write-Error "##[ERROR]Credential files missing. Exiting script..."
     exit
 }
-Select-AzureRmProfile -Path $Credential_Path | Out-Null
-
-# Set the Subscription ID
-$SubscriptionIDPath = Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "subId.txt"
-Write-Verbose "Subscription ID File: $SubscriptionIDPath"
-if (! (Test-Path $SubscriptionIDPath)) {
-    Write-Error "###[ERROR]Subscription ID file missing. Exiting script..."
-    exit
-}
-$SubscriptionID = Get-Content -Path $SubscriptionIDPath
-Select-AzureRmSubscription -SubscriptionId $SubscriptionID  | Out-Null
+Select-AzureRmProfile -Path $credentialPath | Out-Null
 
 $allVms = Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs/virtualMachines" -ResourceNameContains $LabName
 $jobs = @()

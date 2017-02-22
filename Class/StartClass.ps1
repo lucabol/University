@@ -22,31 +22,25 @@ param
 
     # New VM name
     [Parameter(Mandatory=$false, HelpMessage="Prefix for new VMs")]
-    [string] $newVMName = "studentlabvm"    
+    [string] $newVMName = "studentlabvm",
+
+    # Credential path
+    [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure credentials")]
+    [string] $credentialPath = "$env:APPDATA\AzProfile.txt"
+       
 )
 
 # Stops at the first error instead of continuing and potentially messing up things
 $global:erroractionpreference = 1
 
 # Load the credentials
-$Credential_Path =  Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "creds.txt"
-Write-Verbose "Credentials File: $Credential_Path"
-if (! (Test-Path $Credential_Path)) {
+Write-Verbose "Credentials File: $credentialPath"
+if (! (Test-Path $credentialPath)) {
     Write-Error "Credential files missing. Exiting script..."
     exit 1
 }
 
-Select-AzureRmProfile -Path $Credential_Path | Out-Null
-
-# Set the Subscription ID
-$SubscriptionIDPath = Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "subID.txt"
-Write-Verbose "Subscription ID File: $SubscriptionIDPath"
-if (! (Test-Path $SubscriptionIDPath)) {
-    Write-Error "Subscription ID file missing. Exiting script..."
-    exit 1
-}
-$SubscriptionID = Get-Content -Path $SubscriptionIDPath
-Select-AzureRmSubscription -SubscriptionId $SubscriptionID | Out-Null
+Select-AzureRmProfile -Path $credentialPath | Out-Null
 
 # Check to see if any VMs already exist in the lab. 
 # Assume if ANY VMs exist then 
