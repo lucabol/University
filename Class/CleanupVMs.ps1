@@ -12,6 +12,11 @@ param
 # Stops at the first error instead of continuing and potentially messing up things
 $global:erroractionpreference = 1
 
+# Disable progress bar if Verbose was not passed in. need to test
+if($VerbosePreference -eq "SilentlyContinue") {
+    $ProgressPreference = "SilentlyContinue"
+}
+
 # Load the credentials
 Write-Verbose "Credentials File: $credentialPath"
 if (! (Test-Path $credentialPath)) {
