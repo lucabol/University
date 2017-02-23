@@ -116,7 +116,7 @@ finally {
     $result.statusMessage = $deploymentEval.statusMessage    
 
     # process each deployment operation. separate into succeeded and failed buckets    
-    ($ops | ?{$_.properties.provisioningOperation -ne "EvaluateDeploymentOutput"}).Properties | ForEach-Object {        
+    ($ops | Where-Object {$_.properties.provisioningOperation -ne "EvaluateDeploymentOutput"}).Properties | ForEach-Object {        
         $task = @{}
         $task.name = $_.targetResource.ResourceName
         $task.type = $_.targetResource.ResourceType

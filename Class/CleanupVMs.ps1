@@ -45,15 +45,15 @@ $result.Failed = @()
 if($jobs.Count -ne 0) {
     try{
         $result.statusCode = "Started"
-        $result.statusMessage = ""
-        Write-Verbose "Waiting for VM Delete jobs to complete"
+        $result.statusMessage = "VM Delete jobs pending completion"
+        LogOutput "Waiting for VM Delete jobs to complete"
         foreach ($job in $jobs){
             Receive-Job $job -Wait | Write-Verbose
         }
     } catch {
-        LogError Caught an exception:” -ForegroundColor Red
-        LogError Exception Type: $($_.Exception.GetType().FullName)” -ForegroundColor Red
-        LogError Exception Message: $($_.Exception.Message)” -ForegroundColor Red                
+        LogError "Caught an exception:" -ForegroundColor Red
+        LogError "Exception Type: $($_.Exception.GetType().FullName)" -ForegroundColor Red
+        LogError "Exception Message: $($_.Exception.Message)" -ForegroundColor Red                
         $result.statusCode = "Failed"
         $result.statusMessage = "$($_.Exception.Message)"
     }
@@ -79,8 +79,7 @@ if($jobs.Count -ne 0) {
         }
         Remove-Job -Job $jobs        
     }
-}
-else {
+} else {
     $result.statusCode = "Skipped"
     $result.statusMessage = "No VMs to delete"
     LogOutput "No VMs to delete"
