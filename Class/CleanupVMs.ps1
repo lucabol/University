@@ -12,10 +12,8 @@ param
 # Stops at the first error instead of continuing and potentially messing up things
 $global:erroractionpreference = 1
 
-# Disable progress bar if Verbose was not passed in. need to test
-if($VerbosePreference -eq "SilentlyContinue") {
-    $ProgressPreference = "SilentlyContinue"
-}
+# Used to disable progress bar when removing resource
+$notVerbose = $VerbosePreference -eq "SilentlyContinue"
 
 # Load the credentials
 Write-Verbose "Credentials File: $credentialPath"
@@ -29,7 +27,11 @@ $allVms = Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs/virtualM
 $jobs = @()
 
 $deleteVmBlock = {
-    Param ($ProfilePath, $vmName, $resourceId)
+    Param ($ProfilePath, $vmName, $resourceId, $notVerbose)
+
+    if($notVerbose) {
+        $ProgressPreference = "SilentlyContinue" # disable progress bar if not verbose
+    }
     Write-Verbose "Deleting VM: $vmName"
     Select-AzureRmProfile -Path $ProfilePath | Out-Null
     Remove-AzureRmResource -ResourceId $resourceId -ApiVersion 2016-05-15 -Force | Out-Null
@@ -41,7 +43,7 @@ foreach ($currentVm in $allVms){
     $vmName = $currentVm.ResourceName
     Write-Verbose "Starting job to delete VM $vmName"
 
-    $jobs += Start-Job -ScriptBlock $deleteVmBlock -ArgumentList $credentialPath, $vmName, $currentVm.ResourceId    
+    $jobs += Start-Job -ScriptBlock $deleteVmBlock -ArgumentList $credentialPath, $vmName, $currentVm.ResourceId, $notVerbose   
 }
 
 if($jobs.Count -ne 0)
@@ -52,9 +54,9 @@ if($jobs.Count -ne 0)
             Receive-Job $job -Wait -Force | Write-Verbose
         }
     } catch {
-        write-host “Caught an exception:” -ForegroundColor Red
-        write-host “Exception Type: $($_.Exception.GetType().FullName)” -ForegroundColor Red
-        write-host “Exception Message: $($_.Exception.Message)” -ForegroundColor Red                
+        Write-Error “Caught an exception:” -ForegroundColor Red
+        Write-Error “Exception Type: $($_.Exception.GetType().FullName)” -ForegroundColor Red
+        Write-Error “Exception Message: $($_.Exception.Message)” -ForegroundColor Red                
     }
     finally{
         Remove-Job -Job $jobs
