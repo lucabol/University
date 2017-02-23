@@ -41,7 +41,7 @@ foreach ($currentVm in $allVms){
     $vmName = $currentVm.ResourceName
     Write-Verbose "Starting job to delete VM $vmName"
 
-    $jobs += Start-Job -ScriptBlock $deleteVmBlock -ArgumentList $Credential_Path, $vmName, $currentVm.ResourceId    
+    $jobs += Start-Job -ScriptBlock $deleteVmBlock -ArgumentList $credentialPath, $vmName, $currentVm.ResourceId    
 }
 
 if($jobs.Count -ne 0)
@@ -49,7 +49,7 @@ if($jobs.Count -ne 0)
     try{
         Write-Verbose "Waiting for VM Delete jobs to complete"
         foreach ($job in $jobs){
-            Receive-Job $job -Wait | Write-Verbose
+            Receive-Job $job -Wait -Force | Write-Verbose
         }
     } catch {
         write-host “Caught an exception:” -ForegroundColor Red
