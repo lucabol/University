@@ -6,65 +6,90 @@ param
 )
 
 # Stops at the first error instead of continuing and potentially messing up things
-$global:erroractionpreference = 1
+#$global:erroractionpreference = 1
+$global:VerbosePreference = $VerbosePreference
+$global:OutputFile = $OutputFile
+
+$HelperModule = Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "ClassHelper.psm1"
+Import-Module $HelperModule
 
 # Load the credentials
-$Credential_Path =  Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "creds.txt"
-Write-Verbose "Credentials File: $Credential_Path"
-if (! (Test-Path $Credential_Path)) {
-    Write-Error "##[ERROR]Credential files missing. Exiting script..."
-    exit
-}
-Select-AzureRmProfile -Path $Credential_Path | Out-Null
-
-# Set the Subscription ID
-$SubscriptionIDPath = Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "subId.txt"
-Write-Verbose "Subscription ID File: $SubscriptionIDPath"
-if (! (Test-Path $SubscriptionIDPath)) {
-    Write-Error "###[ERROR]Subscription ID file missing. Exiting script..."
-    exit
-}
-$SubscriptionID = Get-Content -Path $SubscriptionIDPath
-Select-AzureRmSubscription -SubscriptionId $SubscriptionID  | Out-Null
+$CredentialsPath = LoadCredentials
+$SubscriptionID = LoadSubscription
 
 $allVms = Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs/virtualMachines" -ResourceNameContains $LabName
 $jobs = @()
 
 $deleteVmBlock = {
-    Param ($ProfilePath, $vmName, $resourceId)
-    Write-Verbose "Deleting VM: $vmName"
+    Param ($ProfilePath, $vmName, $resourceId, $HelperModule)    
+    Import-Module $HelperModule
+    LogOutput "Deleting VM: $vmName"    
     Select-AzureRmProfile -Path $ProfilePath | Out-Null
     Remove-AzureRmResource -ResourceId $resourceId -ApiVersion 2016-05-15 -Force | Out-Null
-    Write-Verbose "Completed deleting $vmName"
+    LogOutput "Completed deleting $vmName"
 }
 
 # Iterate over all the VMs and delete any that we created
 foreach ($currentVm in $allVms){        
     $vmName = $currentVm.ResourceName
-    Write-Verbose "Starting job to delete VM $vmName"
-
-    $jobs += Start-Job -ScriptBlock $deleteVmBlock -ArgumentList $Credential_Path, $vmName, $currentVm.ResourceId    
+    LogOutput "Starting job to delete VM $vmName"
+    $jobs += Start-Job -Name $vmName -ScriptBlock $deleteVmBlock -ArgumentList $CredentialsPath, $vmName, $currentVm.ResourceId, $HelperModule
 }
 
-if($jobs.Count -ne 0)
-{
+$result = @{}
+$result.statusCode = "Not Started"
+$result.statusMessage = "Delete VMs process pending execution"
+$result.Succeeded = @()
+$result.Failed = @()
+
+if($jobs.Count -ne 0) {
     try{
+        $result.statusCode = "Started"
+        $result.statusMessage = ""
         Write-Verbose "Waiting for VM Delete jobs to complete"
         foreach ($job in $jobs){
             Receive-Job $job -Wait | Write-Verbose
         }
     } catch {
-        write-host “Caught an exception:” -ForegroundColor Red
-        write-host “Exception Type: $($_.Exception.GetType().FullName)” -ForegroundColor Red
-        write-host “Exception Message: $($_.Exception.Message)” -ForegroundColor Red                
+        LogError Caught an exception:” -ForegroundColor Red
+        LogError Exception Type: $($_.Exception.GetType().FullName)” -ForegroundColor Red
+        LogError Exception Message: $($_.Exception.Message)” -ForegroundColor Red                
+        $result.statusCode = "Failed"
+        $result.statusMessage = "$($_.Exception.Message)"
     }
     finally{
-        Remove-Job -Job $jobs
+        Get-Job | ForEach-Object {
+            $status = @{}
+            $status.Name = $_.Name
+            $status.State = $_.State
+            if ($_.State -eq "Completed") {
+                $status.Details = "Job Succeeded"
+                $result.Succeeded += $status
+            } else {
+                $status.Details = (Get-Job -Name $_.Name).JobStateInfo.Reason
+                $result.Failed += $status
+            }
+        }
+        if ($result.Failed.Count -gt 0) {
+            $result.statusCode = "Failed"
+            $result.statusMessage = "One or more VMs were not successfully deleted. Please see details for each job to for more information"
+        } else {
+            $result.statusCode = "Success"
+            $result.statusMessage = "VMs successfully deleted"
+        }
+        Remove-Job -Job $jobs        
     }
 }
-else 
-{
-    Write-Verbose "No VMs to delete"
+else {
+    $result.statusCode = "Skipped"
+    $result.statusMessage = "No VMs to delete"
+    LogOutput "No VMs to delete"
 }
 
-Write-Verbose "Cleanup complete"
+LogOutput "Status for VM deletion in lab $($LabName): $($result.statusCode)"
+LogOutput "VMs Deleted: $($result.Succeeded.Count)"
+LogOutput "VMs Failed to Delete: $($result.Failed.Count)"
+
+LogOutput "Cleanup Process complete"
+
+return $result

@@ -22,38 +22,35 @@ param
 
     # New VM name
     [Parameter(Mandatory=$false, HelpMessage="Prefix for new VMs")]
-    [string] $newVMName = "studentlabvm"    
+    [string] $newVMName = "studentlabvm"    ,
+
+    # Start time for each "Session" to start
+    [Parameter(Mandatory=$true, HelpMessage="Scheduled start time for class. In form of 'HH:mm'")]
+    [string] $ClassStart,
+
+    # Duration for each VM to "live" before shutting off
+    [Parameter(Mandatory=$true, HelpMessage="Time to live for VMs (in minutes)")]
+    [int] $TTL
 )
+
+$global:VerbosePreference = $VerbosePreference
+
+$rootFolder = Split-Path ($Script:MyInvocation.MyCommand.Path)
+Import-Module (Join-Path $rootFolder "ClassHelper.psm1")
 
 # Stops at the first error instead of continuing and potentially messing up things
 #$global:erroractionpreference = 1
-Write-Verbose "Begin Process"
+LogOutput -msg "Begin Process" 
 $startTime = (Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmss")
 $deploymentName = "Deployment_$LabName_$startTime"
 
 # Load the credentials
-$Credential_Path =  Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "creds.txt"
-Write-Verbose "Credentials File: $Credential_Path"
-if (! (Test-Path $Credential_Path)) {
-    # Fatal error encountered. Exit Script    
-    Write-Error "Credential files missing. Exiting script..."
-    exit 1
-}
-
-Select-AzureRmProfile -Path $Credential_Path | Out-Null
+$Credential_Path = LoadCredentials
 
 # Set the Subscription ID
-$SubscriptionIDPath = Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "subID.txt"
-Write-Verbose "Subscription ID File: $SubscriptionIDPath"
-if (! (Test-Path $SubscriptionIDPath)) {
-    # Fatal error encountered. Log Error/Notify and Exit Script
-    Write-Error "Subscription ID file missing. Exiting script..."
-    exit 1    
-}
-$SubscriptionID = Get-Content -Path $SubscriptionIDPath
-Select-AzureRmSubscription -SubscriptionId $SubscriptionID | Out-Null
+$SubscriptionID = LoadSubscription
 
-# Do we need to check if the Subscription is correct selected?
+# Do we need to check if the Subscription is correctly selected?
 
 # Check to see if any VMs already exist in the lab. 
 # Assume if ANY VMs exist then 
@@ -61,22 +58,31 @@ Select-AzureRmSubscription -SubscriptionId $SubscriptionID | Out-Null
 #   b) has not been cleaned up 
 #   thus the script should exit
 # 
-Write-Verbose "Checking for existing VMs in $LabName"
+LogOutput "Checking for existing VMs in $LabName"
 $existingVMs = (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs/virtualMachines" -ResourceNameContains $newVMName).Count
 
 if ($existingVMs -ne 0) {
     # Fatal error encountered. Log Error/Notify and Exit Script
-    Write-Error "Lab $LabName contains $existingVMs existing VMs. Please clean up lab before creating new VMs"
+    LogError "Lab $LabName contains $existingVMs existing VMs. Please clean up lab before creating new VMs"
     Exit 1
 }
 
 # Result object to return
 $result = @{}
+$result.statusCode = "Not Started"
+$result.statusMessage = "Start class process pending execution"
+$result.Failed = @()
+$result.Succeeded = @()
 
 # Set the expiration Date
 $UniversalDate = (Get-Date).ToUniversalTime()
 $ExpirationDate = $UniversalDate.AddDays(1).ToString("yyyy-MM-dd")
-Write-Verbose "Expiration Date: $ExpirationDate"
+LogOutput "Expiration Date: $ExpirationDate"
+
+# Set the shutdown time
+$startTime = Get-Date $ClassStart
+$endTime = $startTime.AddMinutes($TTL).toString("yyyyMMddHHmmss")
+LogOutput "Class Start Time: $($startTime)    Class End Time: $($endTime)"
 
 $parameters = @{}
 $parameters.Add("count",$VMCount)
@@ -85,12 +91,15 @@ $parameters.Add("newVMName", $newVMName)
 $parameters.Add("size", $ImageSize)
 $parameters.Add("expirationDate", $ExpirationDate)
 $parameters.Add("imageName", $BaseImage)
+$parameters.Add("shutDownTime", $endTime)
 
 $ResourceGroupName = (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs" -ResourceNameContains $LabName).ResourceGroupName
 
 # deploy resources via template
 try {
-    Write-Verbose "Starting Deployment $deploymentName for lab $LabName"
+    LogOutput "Starting Deployment $deploymentName for lab $LabName"
+    $result.statusCode = "Started"
+    $result.statusMessage = "Beginning template deployment"
     $vmDeployResult = New-AzureRmResourceGroupDeployment -Name $deploymentName -ResourceGroup $ResourceGroupName -TemplateFile $TemplatePath -TemplateParameterObject $parameters 
 } 
 catch {
@@ -104,34 +113,28 @@ finally {
     $deploymentEval = ($ops | Where-Object {$_.properties.provisioningOperation -eq "EvaluateDeploymentOutput"}).Properties
     
     $result.statusCode = $deploymentEval.statusCode
-    $result.statusMessage = $deploymentEval.statusMessage
-
-    $failedtasks = @()
-    $succeededtasks = @()
+    $result.statusMessage = $deploymentEval.statusMessage    
 
     # process each deployment operation. separate into succeeded and failed buckets    
-    ($ops | Where-Object {$_.properties.provisioningOperation -ne "EvaluateDeploymentOutput"}).Properties | ForEach-Object {        
+    ($ops | ?{$_.properties.provisioningOperation -ne "EvaluateDeploymentOutput"}).Properties | ForEach-Object {        
         $task = @{}
         $task.name = $_.targetResource.ResourceName
         $task.type = $_.targetResource.ResourceType
         $task.statusCode = $_.targetResource.statusCode
         $task.statusMessage= $_.targetResource.statusMessage
         if ($_.provisioningState -eq "Succeeded") {                
-            $succeededtasks += $task
+            $result.Succeeded += $task
         } else {
-            $failedtasks += $task
+            $result.Failed += $task
         }
-    }
-
-    $result.Succeeded = $succeededtasks
-    $result.Failed = $failedtasks
+    }    
     
-    Write-Verbose "Status for VM creation in lab $($LabName): $($result.statusCode)"
-    Write-Verbose "Target VMs: $VMCount"
-    Write-Verbose "VMs Succesfully created: $($result.Succeeded.Count)"
-    Write-Verbose "VMs Failed: $($result.Failed.Count)"
+    LogOutput "Status for VM creation in lab $($LabName): $($result.statusCode)"
+    LogOutput "Target VMs: $VMCount"
+    LogOutput "VMs Succesfully created: $($result.Succeeded.Count)"
+    LogOutput "VMs Failed: $($result.Failed.Count)"
     
 }
 
-Write-Verbose "Process complete"
+LogOutput "Process complete"
 return $result

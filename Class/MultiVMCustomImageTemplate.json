@@ -22,6 +22,13 @@
         },
         "imageName": {
             "type": "string"
+        },
+        "shutDownTime": {
+            "type": "string"
+        },
+        "timeZoneID": {
+            "type": "string",
+            "defaultValue": "Central European Standard Time"
         }
     },
     "variables": {
@@ -62,7 +69,29 @@
                         ]
                     }
                 }
-            }
+            },
+            "resources": [
+                {
+                    "apiVersion": "2016-05-15",
+                    "name": "LabVmsShutdown1",
+                    "type": "schedules",
+                    "dependsOn": [
+                        "vmcopy"
+                    ],
+                    "properties": {
+                        "status": "Enabled",
+                        "timeZoneId": "[parameters('timeZoneID')]",
+                        "dailyRecurrent": {
+                            "time": "[replace(parameters('shutDownTime'),':','')]"
+                        },
+                        "taskType": "LabVmsShutdownTask",
+                        "notificationSettings": {
+                            "status": "Enabled",
+                            "timeInMinutes": 15
+                        }
+                    }
+                }
+            ]
         }
     ]
 }
