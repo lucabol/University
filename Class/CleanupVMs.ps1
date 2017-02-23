@@ -2,13 +2,16 @@
 param
 (
     [Parameter(Mandatory=$true, HelpMessage="The name of the Dev Test Lab to clean up")]
-    [string] $LabName
+    [string] $LabName,
+
+    # Credential path
+    [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure credentials")]
+    [string] $credentialPath = "$env:APPDATA\AzProfile.txt"
 )
 
 # Stops at the first error instead of continuing and potentially messing up things
 #$global:erroractionpreference = 1
 $global:VerbosePreference = $VerbosePreference
-$global:OutputFile = $OutputFile
 
 $HelperModule = Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "ClassHelper.psm1"
 Import-Module $HelperModule
@@ -17,13 +20,19 @@ Import-Module $HelperModule
 $CredentialsPath = LoadCredentials
 $SubscriptionID = LoadSubscription
 
+# Used to disable progress bar when removing resource
+$notVerbose = $VerbosePreference -eq "SilentlyContinue"
+
 $allVms = Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs/virtualMachines" -ResourceNameContains $LabName
 $jobs = @()
 
 $deleteVmBlock = {
-    Param ($ProfilePath, $vmName, $resourceId, $HelperModule)    
+    Param ($ProfilePath, $vmName, $resourceId, $notVerbose, $HelperModule)
     Import-Module $HelperModule
     LogOutput "Deleting VM: $vmName"    
+    if($notVerbose) {
+        $ProgressPreference = "SilentlyContinue" # disable progress bar if not verbose
+    }    
     Select-AzureRmProfile -Path $ProfilePath | Out-Null
     Remove-AzureRmResource -ResourceId $resourceId -ApiVersion 2016-05-15 -Force | Out-Null
     LogOutput "Completed deleting $vmName"
@@ -33,7 +42,7 @@ $deleteVmBlock = {
 foreach ($currentVm in $allVms){        
     $vmName = $currentVm.ResourceName
     LogOutput "Starting job to delete VM $vmName"
-    $jobs += Start-Job -Name $vmName -ScriptBlock $deleteVmBlock -ArgumentList $CredentialsPath, $vmName, $currentVm.ResourceId, $HelperModule
+    $jobs += Start-Job -Name $vmName -ScriptBlock $deleteVmBlock -ArgumentList $CredentialsPath, $vmName, $currentVm.ResourceId, $notVerbose, $HelperModule
 }
 
 $result = @{}
@@ -48,7 +57,7 @@ if($jobs.Count -ne 0) {
         $result.statusMessage = "VM Delete jobs pending completion"
         LogOutput "Waiting for VM Delete jobs to complete"
         foreach ($job in $jobs){
-            Receive-Job $job -Wait | Write-Verbose
+            Receive-Job $job -Wait -Force | Write-Verbose
         }
     } catch {
         LogError "Caught an exception:" -ForegroundColor Red

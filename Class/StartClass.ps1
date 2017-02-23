@@ -22,6 +22,7 @@ param
 
     # New VM name
     [Parameter(Mandatory=$false, HelpMessage="Prefix for new VMs")]
+<<<<<<< HEAD
     [string] $newVMName = "studentlabvm"    ,
 
     # Start time for each "Session" to start
@@ -31,6 +32,14 @@ param
     # Duration for each VM to "live" before shutting off
     [Parameter(Mandatory=$true, HelpMessage="Time to live for VMs (in minutes)")]
     [int] $TTL
+=======
+    [string] $newVMName = "studentlabvm",
+
+    # Credential path
+    [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure credentials")]
+    [string] $credentialPath = "$env:APPDATA\AzProfile.txt"
+       
+>>>>>>> master
 )
 
 $global:VerbosePreference = $VerbosePreference
@@ -45,12 +54,22 @@ $startTime = (Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmss")
 $deploymentName = "Deployment_$LabName_$startTime"
 
 # Load the credentials
+<<<<<<< HEAD
 $Credential_Path = LoadCredentials
 
 # Set the Subscription ID
 $SubscriptionID = LoadSubscription
 
 # Do we need to check if the Subscription is correctly selected?
+=======
+Write-Verbose "Credentials File: $credentialPath"
+if (! (Test-Path $credentialPath)) {
+    Write-Error "Credential files missing. Exiting script..."
+    exit 1
+}
+
+Select-AzureRmProfile -Path $credentialPath | Out-Null
+>>>>>>> master
 
 # Check to see if any VMs already exist in the lab. 
 # Assume if ANY VMs exist then 
