@@ -18,21 +18,22 @@ function LogError {
     
 }
 
-function LoadCredentials {
+function LoadProfile {
     [CmdletBinding()]
-    $Credential_Path = Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "creds.txt"
-    LogOutput "Credentials File: $Credential_Path"
-    if (! (Test-Path $Credential_Path)) {
-        LogError "Credential files not found at $Credential_Path. Exiting script..."    
+    param($profilePath)    
+    LogOutput "Credentials File: $profilePath"
+    if (! (Test-Path $profilePath)) {
+        LogError "Profile file(s) not found at $profilePath. Exiting script..."    
         Exit 1
     }
-    Select-AzureRmProfile -Path $Credential_Path | Out-Null    
-    return $Credential_Path
+    Select-AzureRmProfile -Path $profilePath | Out-Null    
+    #return $credPath
 }
 
 function LoadSubscription {
     [CmdletBinding()]
-    $SubscriptionIDPath = Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "subId.txt"
+    param($subscriptionIDPath)
+    #$SubscriptionIDPath = Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "subId.txt"
     LogOutput "Subscription ID File: $SubscriptionIDPath"
     if (! (Test-Path $SubscriptionIDPath)) {
         LogError "Subscription ID file missing at $SubscriptionIDPath. Exiting script..." 

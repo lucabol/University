@@ -22,8 +22,7 @@ param
 
     # New VM name
     [Parameter(Mandatory=$false, HelpMessage="Prefix for new VMs")]
-<<<<<<< HEAD
-    [string] $newVMName = "studentlabvm"    ,
+    [string] $newVMName = "studentlabvm",
 
     # Start time for each "Session" to start
     [Parameter(Mandatory=$true, HelpMessage="Scheduled start time for class. In form of 'HH:mm'")]
@@ -31,15 +30,14 @@ param
 
     # Duration for each VM to "live" before shutting off
     [Parameter(Mandatory=$true, HelpMessage="Time to live for VMs (in minutes)")]
-    [int] $TTL
-=======
-    [string] $newVMName = "studentlabvm",
+    [int] $Duration,
 
     # Credential path
-    [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure credentials")]
-    [string] $credentialPath = "$env:APPDATA\AzProfile.txt"
-       
->>>>>>> master
+    [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure Profile")]
+    [string] $profilePath = "$env:APPDATA\AzProfile.txt",
+
+    [Parameter(Mandatory=$false, HelpMessage="Path to subscription ID file")]
+    [string] $subscriptionIDPath = "$env:APPDATA\AzSubscription.txt"
 )
 
 $global:VerbosePreference = $VerbosePreference
@@ -54,22 +52,12 @@ $startTime = (Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmss")
 $deploymentName = "Deployment_$LabName_$startTime"
 
 # Load the credentials
-<<<<<<< HEAD
-$Credential_Path = LoadCredentials
+LoadProfile $profilePath
 
 # Set the Subscription ID
-$SubscriptionID = LoadSubscription
+LoadSubscription $subscriptionIDPath
 
 # Do we need to check if the Subscription is correctly selected?
-=======
-Write-Verbose "Credentials File: $credentialPath"
-if (! (Test-Path $credentialPath)) {
-    Write-Error "Credential files missing. Exiting script..."
-    exit 1
-}
-
-Select-AzureRmProfile -Path $credentialPath | Out-Null
->>>>>>> master
 
 # Check to see if any VMs already exist in the lab. 
 # Assume if ANY VMs exist then 
@@ -100,7 +88,7 @@ LogOutput "Expiration Date: $ExpirationDate"
 
 # Set the shutdown time
 $startTime = Get-Date $ClassStart
-$endTime = $startTime.AddMinutes($TTL).toString("yyyyMMddHHmmss")
+$endTime = $startTime.AddMinutes($Duration).toString("yyyyMMddHHmmss")
 LogOutput "Class Start Time: $($startTime)    Class End Time: $($endTime)"
 
 $parameters = @{}
@@ -124,6 +112,7 @@ try {
 catch {
     $result.errorCode = $_.Exception.GetType().FullName
     $result.errorMessage = $_.Exception.Message
+    LogError "Exception: $($result.errorCode) Message: $($result.errorMessage)"
 }
 finally {
     #Even if we got an error from the deployment call, get the deployment operation statuses for more invformation

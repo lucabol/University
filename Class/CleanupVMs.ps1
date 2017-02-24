@@ -5,8 +5,11 @@ param
     [string] $LabName,
 
     # Credential path
-    [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure credentials")]
-    [string] $credentialPath = "$env:APPDATA\AzProfile.txt"
+    [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure Profile")]
+    [string] $profilePath = "$env:APPDATA\AzProfile.txt",
+
+    [Parameter(Mandatory=$false, HelpMessage="Path to subscription ID file")]
+    [string] $subscriptionIDPath = "$env:APPDATA\AzSubscription.txt"
 )
 
 # Stops at the first error instead of continuing and potentially messing up things
@@ -17,8 +20,8 @@ $HelperModule = Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "Cl
 Import-Module $HelperModule
 
 # Load the credentials
-$CredentialsPath = LoadCredentials
-$SubscriptionID = LoadSubscription
+LoadProfile $profilePath
+$SubscriptionID = LoadSubscription $subscriptionIDPath
 
 # Used to disable progress bar when removing resource
 $notVerbose = $VerbosePreference -eq "SilentlyContinue"
@@ -42,7 +45,7 @@ $deleteVmBlock = {
 foreach ($currentVm in $allVms){        
     $vmName = $currentVm.ResourceName
     LogOutput "Starting job to delete VM $vmName"
-    $jobs += Start-Job -Name $vmName -ScriptBlock $deleteVmBlock -ArgumentList $CredentialsPath, $vmName, $currentVm.ResourceId, $notVerbose, $HelperModule
+    $jobs += Start-Job -Name $vmName -ScriptBlock $deleteVmBlock -ArgumentList $profilePath, $vmName, $currentVm.ResourceId, $notVerbose, $HelperModule
 }
 
 $result = @{}
@@ -63,8 +66,9 @@ if($jobs.Count -ne 0) {
         LogError "Caught an exception:" -ForegroundColor Red
         LogError "Exception Type: $($_.Exception.GetType().FullName)" -ForegroundColor Red
         LogError "Exception Message: $($_.Exception.Message)" -ForegroundColor Red                
-        $result.statusCode = "Failed"
-        $result.statusMessage = "$($_.Exception.Message)"
+        $result.statusCode = "Failed"        
+        $result.errorCode = $_.Exception.GetType().FullName
+        $result.statusMessage = $_.Exception.Message
     }
     finally{
         Get-Job | ForEach-Object {

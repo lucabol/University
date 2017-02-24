@@ -69,29 +69,31 @@
                         ]
                     }
                 }
+            }
+        },
+        {
+            "apiVersion": "2016-05-15",
+            "name": "[concat(variables('vmName'), copyIndex(), '/LabVmsShutdown')]",
+            "type": "Microsoft.DevTestLab/labs/virtualmachines/schedules",
+            "copy": {
+                "name": "taskcopy",
+                "count": "[parameters('count')]"
             },
-            "resources": [
-                {
-                    "apiVersion": "2016-05-15",
-                    "name": "LabVmsShutdown1",
-                    "type": "schedules",
-                    "dependsOn": [
-                        "vmcopy"
-                    ],
-                    "properties": {
-                        "status": "Enabled",
-                        "timeZoneId": "[parameters('timeZoneID')]",
-                        "dailyRecurrent": {
-                            "time": "[replace(parameters('shutDownTime'),':','')]"
-                        },
-                        "taskType": "LabVmsShutdownTask",
-                        "notificationSettings": {
-                            "status": "Enabled",
-                            "timeInMinutes": 15
-                        }
-                    }
+            "dependsOn": [
+                "vmCopy"
+            ],
+            "properties": {
+                "status": "Enabled",
+                "timeZoneId": "[parameters('timeZoneID')]",
+                "dailyRecurrence": {
+                    "time": "[replace(parameters('shutDownTime'),':','')]"
+                },
+                "taskType": "LabVmsShutdownTask",
+                "notificationSettings": {
+                    "status": "Enabled",
+                    "timeInMinutes": 15
                 }
-            ]
-        }
+            }
+        }   
     ]
 }
