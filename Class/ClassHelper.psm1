@@ -3,9 +3,7 @@ function LogOutput {
     param($msg)
     $timestamp = (Get-Date).ToUniversalTime()
     $output = "$timestamp [INFO]:: $msg"    
-    if ($VerbosePreference -ne "SilentlyContinue") {
-        Write-Verbose $output
-    }        
+    Write-Verbose $output
 }
 
 function LogError {
@@ -28,17 +26,3 @@ function LoadProfile {
     }
     Select-AzureRmProfile -Path $profilePath | Out-Null    
 }
-
-#function LoadSubscription {
-#    [CmdletBinding()]
-#    param($subscriptionIDPath)
-#    LogOutput "Subscription ID File: $SubscriptionIDPath"
-#    if (! (Test-Path $SubscriptionIDPath)) {
-#        LogError "Subscription ID file missing at $SubscriptionIDPath. Exiting script..." 
-#        Exit 1
-#    }
-#    $SubscriptionID = Get-Content -Path $SubscriptionIDPath
-#    LogOutput -msg "Subscription ID: $SubscriptionID"
-#    Select-AzureRmSubscription -SubscriptionId $SubscriptionID  | Out-Null
-#    Return $SubscriptionID
-#}
