@@ -34,10 +34,7 @@ param
 
     # Credential path
     [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure Profile")]
-    [string] $profilePath = "$env:APPDATA\AzProfile.txt",
-
-    [Parameter(Mandatory=$false, HelpMessage="Path to subscription ID file")]
-    [string] $subscriptionIDPath = "$env:APPDATA\AzSubscription.txt"
+    [string] $profilePath = "$env:APPDATA\AzProfile.txt"
 )
 
 $global:VerbosePreference = $VerbosePreference
@@ -55,7 +52,7 @@ $deploymentName = "Deployment_$LabName_$startTime"
 LoadProfile $profilePath
 
 # Set the Subscription ID
-LoadSubscription $subscriptionIDPath
+$SubscriptionID = (Get-AzureRmContext).Subscription.SubscriptionId
 
 # Do we need to check if the Subscription is correctly selected?
 
@@ -88,7 +85,7 @@ LogOutput "Expiration Date: $ExpirationDate"
 
 # Set the shutdown time
 $startTime = Get-Date $ClassStart
-$endTime = $startTime.AddMinutes($Duration).toString("yyyyMMddHHmmss")
+$endTime = $startTime.AddMinutes($Duration).toString("HHmm")
 LogOutput "Class Start Time: $($startTime)    Class End Time: $($endTime)"
 
 $parameters = @{}

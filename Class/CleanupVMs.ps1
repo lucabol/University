@@ -6,10 +6,7 @@ param
 
     # Credential path
     [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure Profile")]
-    [string] $profilePath = "$env:APPDATA\AzProfile.txt",
-
-    [Parameter(Mandatory=$false, HelpMessage="Path to subscription ID file")]
-    [string] $subscriptionIDPath = "$env:APPDATA\AzSubscription.txt"
+    [string] $profilePath = "$env:APPDATA\AzProfile.txt"
 )
 
 # Stops at the first error instead of continuing and potentially messing up things
@@ -21,7 +18,6 @@ Import-Module $HelperModule
 
 # Load the credentials
 LoadProfile $profilePath
-$SubscriptionID = LoadSubscription $subscriptionIDPath
 
 # Used to disable progress bar when removing resource
 $notVerbose = $VerbosePreference -eq "SilentlyContinue"

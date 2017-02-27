@@ -88,11 +88,7 @@
                 "dailyRecurrence": {
                     "time": "[replace(parameters('shutDownTime'),':','')]"
                 },
-                "taskType": "LabVmsShutdownTask",
-                "notificationSettings": {
-                    "status": "Enabled",
-                    "timeInMinutes": 15
-                }
+                "taskType": "LabVmsShutdownTask"                
             }
         }   
     ]
