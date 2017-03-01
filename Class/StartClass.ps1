@@ -133,10 +133,14 @@ finally {
             $result.Failed += $task
         }
     }    
+
+    $vmsCreated = ($result.Succeeded | Where-Object {*$_.type -eq "Microsoft.DevTestLabs/labs/virtualmachines"}).Count
+    $subResourcesCreated = ($result.Succeeded | Where-Object {*$_.type -ne "Microsoft.DevTestLabs/labs/virtualmachines"}).Count
     
     LogOutput "Status for VM creation in lab $($LabName): $($result.statusCode)"
     LogOutput "Target VMs: $VMCount"
-    LogOutput "VMs Succesfully created: $($result.Succeeded.Count)"
+    LogOutput "VMs Succesfully created: $vmsCreated"
+    LogOutput "VM Sub-Resources Succesfully created: $subResourcesCreated"
     LogOutput "VMs Failed: $($result.Failed.Count)"
     
 }
