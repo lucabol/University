@@ -34,7 +34,7 @@ $deleteVmBlock = {
     }    
     Select-AzureRmProfile -Path $ProfilePath | Out-Null
     Remove-AzureRmResource -ResourceId $resourceId -ApiVersion 2016-05-15 -Force | Out-Null
-    LogOutput "Completed deleting $vmName"
+    LogOutput "Completed deleting $vmName"    
 }
 
 # Iterate over all the VMs and delete any that we created
@@ -51,43 +51,42 @@ $result.Succeeded = @()
 $result.Failed = @()
 
 if($jobs.Count -ne 0) {
-    try{
-        $result.statusCode = "Started"
-        $result.statusMessage = "VM Delete jobs pending completion"
-        LogOutput "Waiting for VM Delete jobs to complete"
-        foreach ($job in $jobs){
-            Receive-Job $job -Wait -Force | Write-Verbose
-        }
-    } catch {
-        LogError "Caught an exception:" -ForegroundColor Red
-        LogError "Exception Type: $($_.Exception.GetType().FullName)" -ForegroundColor Red
-        LogError "Exception Message: $($_.Exception.Message)" -ForegroundColor Red                
-        $result.statusCode = "Failed"        
-        $result.errorCode = $_.Exception.GetType().FullName
-        $result.statusMessage = $_.Exception.Message
-    }
-    finally{
-        Get-Job | ForEach-Object {
+    $result.statusCode = "Started"
+    $result.statusMessage = "VM Delete jobs pending completion"
+    LogOutput "Waiting for VM Delete jobs to complete"
+    Wait-Job -Job $jobs | Write-Verbose
+    LogOutput "VM Deletion jobs have completed"
+    foreach ($job in $jobs){
+        try {
             $status = @{}
-            $status.Name = $_.Name
-            $status.State = $_.State
-            if ($_.State -eq "Completed") {
+            $status.Name = $job.Name
+            $status.State = $job.State
+            if ($job.State -eq "Failed") {
+                $status.Details = (Get-Job -Id $job.Id).JobStateInfo.Reason
+                $result.Failed += $status
+            } else {
+                Receive-Job $job | Write-Verbose
                 $status.Details = "Job Succeeded"
                 $result.Succeeded += $status
-            } else {
-                $status.Details = (Get-Job -Name $_.Name).JobStateInfo.Reason
-                $result.Failed += $status
             }
+        } catch {
+            # Catch any exceptions, log them and add them as part of the "failed" jobs
+            LogError "Caught an exception:"
+            LogError "Exception Type: $($_.Exception.GetType().FullName)"
+            LogError "Exception Message: $($_.Exception.Message)"
+            $status.errorCode = $_.Exception.GetType().FullName
+            $status.errorMessage = $_.Exception.Message
+            $result.Failed += $status
         }
-        if ($result.Failed.Count -gt 0) {
-            $result.statusCode = "Failed"
-            $result.statusMessage = "One or more VMs were not successfully deleted. Please see details for each job to for more information"
-        } else {
-            $result.statusCode = "Success"
-            $result.statusMessage = "VMs successfully deleted"
-        }
-        Remove-Job -Job $jobs        
     }
+    if ($result.Failed.Count -gt 0) {
+        $result.statusCode = "Failed"
+        $result.statusMessage = "One or more VMs were not successfully deleted. Please see details for each job to for more information"
+    } else {
+        $result.statusCode = "Success"
+        $result.statusMessage = "VMs successfully deleted"
+    }
+    Remove-Job -Job $jobs -Force
 } else {
     $result.statusCode = "Skipped"
     $result.statusMessage = "No VMs to delete"
