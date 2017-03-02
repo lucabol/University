@@ -6,16 +6,19 @@
             "value": 4
         },
         "newVMName": {
-            "value": "Acc"
+            "value": "testlabvm"
         },
         "labName": {
-            "value": "Acc30005"
+            "value": "bocconitestlab"
         },
         "expirationDate": {
-            "value": "2017-01-30"
+            "value": "2017-02-27"
         },
         "imageName": {
-            "value": "bocconi"
+            "value": "buAccountin101base2"
+        },
+        "shutDownTime": {
+            "value": "21:23"
         }
     }
 }
