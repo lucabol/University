@@ -6,7 +6,7 @@ Also, they require the creation of an Azure profile file, as detailed below.
 ## Sample usage
 Create 10 VMs in the Stats DTL lab using the UnivImage image.
 
-    StartClass -LabName Stats -VMCount 10 -BaseImage UnivImate
+    StartClass -LabName Stats -VMCount 10 -BaseImage UnivImate -ClassStart 12:00 -Duration 120
 
 Remove all VMs from the Stats DTL lab
 
