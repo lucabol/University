@@ -54,7 +54,7 @@ LoadProfile $profilePath
 # Set the Subscription ID
 $SubscriptionID = (Get-AzureRmContext).Subscription.SubscriptionId
 
-# Do we need to check if the Subscription is correctly selected?
+$ResourceGroupName = (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs" -ResourceNameContains $LabName).ResourceGroupName
 
 # Check to see if any VMs already exist in the lab. 
 # Assume if ANY VMs exist then 
@@ -63,7 +63,7 @@ $SubscriptionID = (Get-AzureRmContext).Subscription.SubscriptionId
 #   thus the script should exit
 # 
 LogOutput "Checking for existing VMs in $LabName"
-$existingVMs = (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs/virtualMachines" -ResourceNameContains $newVMName).Count
+$existingVMs = (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs/virtualMachines" -ResourceNameContains $newVMName -ResourceGroupNameContains $ResourceGroupName).Count
 
 if ($existingVMs -ne 0) {
     # Fatal error encountered. Log Error/Notify and Exit Script
@@ -96,8 +96,6 @@ $parameters.Add("size", $ImageSize)
 $parameters.Add("expirationDate", $ExpirationDate)
 $parameters.Add("imageName", $BaseImage)
 $parameters.Add("shutDownTime", $endTime)
-
-$ResourceGroupName = (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs" -ResourceNameContains $LabName).ResourceGroupName
 
 # deploy resources via template
 try {

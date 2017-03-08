@@ -11,7 +11,7 @@ function LogError {
     param($msg)    
     $timestamp = (Get-Date).ToUniversalTime()
     $output = "$timestamp [ERROR]:: $msg"
-    Write-Error $output -ForegroundColor Red    
+    Write-Error $output     
 }
 
 function LoadProfile {
