@@ -1,0 +1,97 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "count": {
+            "type": "int",
+            "defaultValue": "1"
+        },
+        "newVMName": {
+            "type": "string",
+            "defaultValue": "studentlabvm"
+        },
+        "labName": {
+            "type": "string"
+        },
+        "size": {
+            "type": "string",
+            "defaultValue": "Standard_A2_v2"
+        },
+        "expirationDate": {
+            "type": "string"
+        },
+        "imageName": {
+            "type": "string"
+        },
+        "shutDownTime": {
+            "type": "string"
+        },
+        "timeZoneID": {
+            "type": "string",
+            "defaultValue": "Central European Standard Time"
+        }
+    },
+  "variables": {
+    // so far, use only one subnet for all the VMs of all the labs
+    "labSubnetName": "[concat(variables('labVirtualNetworkName'), 'Subnet01')]",
+    "labVirtualNetworkId": "[resourceId('Microsoft.DevTestLab/labs/virtualnetworks', parameters('labName'), variables('labVirtualNetworkName'))]",
+    // need to have only one VNET for all the labs
+    "labVirtualNetworkName": "DtlBocconiVLab",
+    "vmId": "[resourceId ('Microsoft.DevTestLab/labs/virtualmachines', parameters('labName'), parameters('newVMName'))]",
+    "vmName": "[concat(parameters('labName'), '/', parameters('newVMName'))]",
+    "imageId": "[resourceId ('Microsoft.DevTestLab/labs/customimages', parameters('labName'), parameters('imageName'))]"
+  },
+    "resources": [
+        {
+            "apiVersion": "2016-05-15",
+            "type": "Microsoft.DevTestLab/labs/virtualmachines",
+            "name": "[concat(variables('vmName'), copyIndex())]",
+            "copy": {
+                "name": "vmcopy",
+                "count": "[parameters('count')]"
+            },
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "labVirtualNetworkId": "[variables('labVirtualNetworkId')]",
+                "customImageId": "[variables('imageId')]",
+                "size": "[parameters('size')]",
+                "isAuthenticationWithSshKey": false,
+                "labSubnetName": "[variables('labSubnetName')]",
+                "disallowPublicIpAddress": true,
+                "storageType": "Standard",
+                "allowClaim": true,
+                "expirationDate": "[parameters('expirationDate')]",
+                "networkInterface": {
+                    "sharedPublicIpAddressConfiguration": {
+                        "inboundNatRules": [
+                            {
+                                "transportProtocol": "tcp",
+                                "backendPort": 3389
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2016-05-15",
+            "name": "[concat(variables('vmName'), copyIndex(), '/LabVmsShutdown')]",
+            "type": "Microsoft.DevTestLab/labs/virtualmachines/schedules",
+            "copy": {
+                "name": "taskcopy",
+                "count": "[parameters('count')]"
+            },
+            "dependsOn": [
+                "vmCopy"
+            ],
+            "properties": {
+                "status": "Enabled",
+                "timeZoneId": "[parameters('timeZoneID')]",
+                "dailyRecurrence": {
+                    "time": "[replace(parameters('shutDownTime'),':','')]"
+                },
+                "taskType": "LabVmsShutdownTask"                
+            }
+        }   
+    ]
+}
