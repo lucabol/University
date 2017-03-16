@@ -18,23 +18,16 @@ param
 
     # Image Size
     [Parameter(Mandatory=$false, HelpMessage="Size of VM image")]
-    [string] $ImageSize = "Standard_DS2",    
+    [string] $ImageSize = "Standard_A2_v2",    
 
     # New VM name
     [Parameter(Mandatory=$false, HelpMessage="Prefix for new VMs")]
     [string] $newVMName = "studentlabvm",
 
-    # Start time for each "Session" to start
-    [Parameter(Mandatory=$true, HelpMessage="Scheduled start time for class. In form of 'HH:mm'")]
-    [string] $ClassStart,
+    # Shutdown time for each "Session"
+    [Parameter(Mandatory=$true, HelpMessage="Scheduled shutdown time for class. In form of 'HH:mm'")]
+    [string] $shutDownTime
 
-    # Duration for each VM to "live" before shutting off
-    [Parameter(Mandatory=$true, HelpMessage="Time to live for VMs (in minutes)")]
-    [int] $Duration,
-
-    # Credential path
-    [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure Profile")]
-    [string] $profilePath = "$env:APPDATA\AzProfile.txt"
 )
 
 $global:VerbosePreference = $VerbosePreference
@@ -112,9 +105,8 @@ $ExpirationDate = $UniversalDate.AddDays(1).ToString("yyyy-MM-dd")
 LogOutput "Expiration Date: $ExpirationDate"
 
 # Set the shutdown time
-$startTime = Get-Date $ClassStart
-$endTime = $startTime.AddMinutes($Duration).toString("HHmm")
-LogOutput "Class Start Time: $($startTime)    Class End Time: $($endTime)"
+$endTime = Get-Date $shutDownTime
+LogOutput "Class End Time: $($endTime)"
 
 $parameters = @{}
 $parameters.Add("count",$VMCount)
