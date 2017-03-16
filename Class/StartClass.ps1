@@ -24,9 +24,13 @@ param
     [Parameter(Mandatory=$false, HelpMessage="Prefix for new VMs")]
     [string] $newVMName = "studentlabvm",
 
-     # Shutdown time for each "Session"
-    [Parameter(Mandatory=$true, HelpMessage="Scheduled shutdown time for class. In form of 'HH:mm'")]
-    [string] $shutDownTime,
+    # Start time for each "Session" to start
+    [Parameter(Mandatory=$true, HelpMessage="Scheduled start time for class. In form of 'HH:mm'")]
+    [string] $ClassStart,
+
+    # Duration for each VM to "live" before shutting off
+    [Parameter(Mandatory=$true, HelpMessage="Time to live for VMs (in minutes)")]
+    [int] $Duration,
 
     # Credential path
     [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure Profile")]
@@ -80,9 +84,9 @@ $ExpirationDate = $UniversalDate.AddDays(1).ToString("yyyy-MM-dd")
 LogOutput "Expiration Date: $ExpirationDate"
 
 # Set the shutdown time
-$endTime = Get-Date $shutDownTime
-LogOutput "Class End Time: $($endTime)"
-
+$startTime = Get-Date $ClassStart
+$endTime = $startTime.AddMinutes($Duration).toString("HHmm")
+LogOutput "Class Start Time: $($startTime)    Class End Time: $($endTime)"
 
 $parameters = @{}
 $parameters.Add("count",$VMCount)
