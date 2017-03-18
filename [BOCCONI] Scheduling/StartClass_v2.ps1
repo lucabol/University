@@ -1,8 +1,8 @@
-﻿[cmdletbinding()]
+[cmdletbinding()]
 param 
 (
     [Parameter(Mandatory=$false, HelpMessage="The path to the Deployment Template File ")]
-    [string] $TemplatePath = "https://backupbocconiimagelab.blob.core.windows.net/upload/BOCCONI_MultiVMCustomImageTemplate.json",
+    [string] $TemplatePath = ".\MultiVMCustomImageTemplate.json",
 
     # Instance Count
     [Parameter(Mandatory=$true, HelpMessage="Number of instances to create")]
@@ -26,16 +26,17 @@ param
 
     # Shutdown time for each VM
     [Parameter(Mandatory=$true, HelpMessage="Scheduled shutdown for class. In form of 'HH:mm'")]
-    [string] $ShutDownTime
+    [string] $ShutDownTime,
+
+    # Credential path
+    [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure Profile")]
+    [string] $profilePath = "$env:APPDATA\AzProfile.txt"
 )
 
-#$global:VerbosePreference = $VerbosePreference
+$global:VerbosePreference = $VerbosePreference
 
-$VerbosePreference = "continue"
-
-#NOTE: important to upload the "ClassHelper.psm1" module in the Azure Automation account
-#$rootFolder = Split-Path ($Script:MyInvocation.MyCommand.Path)
-#Import-Module (Join-Path $rootFolder "ClassHelper.psm1")
+$rootFolder = Split-Path ($Script:MyInvocation.MyCommand.Path)
+Import-Module (Join-Path $rootFolder "ClassHelper.psm1")
 
 # Stops at the first error instead of continuing and potentially messing up things
 #$global:erroractionpreference = 1
@@ -44,34 +45,7 @@ $startTime = (Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmss")
 $deploymentName = "Deployment_$LabName_$startTime"
 
 # Load the credentials
-#LoadProfile $profilePath
-
-$connectionName = "AzureRunAsConnection"
-$SubId = Get-AutomationVariable -Name 'SubscriptionId'
-try
-{
-   # Get the connection "AzureRunAsConnection "
-   $servicePrincipalConnection=Get-AutomationConnection -Name $connectionName         
-
-   "Signing in to Azure..."
-   Add-AzureRmAccount `
-     -ServicePrincipal `
-     -TenantId $servicePrincipalConnection.TenantId `
-     -ApplicationId $servicePrincipalConnection.ApplicationId `
-     -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint
-   "Setting context to a specific subscription"     
-   Set-AzureRmContext -SubscriptionId $SubId              
-}
-catch {
-    if (!$servicePrincipalConnection)
-    {
-       $ErrorMessage = "Connection $connectionName not found."
-       throw $ErrorMessage
-     } else{
-        Write-Error -Message $_.Exception
-        throw $_.Exception
-     }
-}
+LoadProfile $profilePath
 
 # Set the Subscription ID
 $SubscriptionID = (Get-AzureRmContext).Subscription.SubscriptionId
