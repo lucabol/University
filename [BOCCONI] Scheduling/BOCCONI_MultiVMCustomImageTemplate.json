@@ -32,7 +32,7 @@
         }
     },
     "variables": {
-        "labSubnetName": "[concat(variables('labVirtualNetworkName'), 'Subnet01')]",
+        "labSubnetName": "DTLBocconiVlabVMs01",
         "labVirtualNetworkId": "[resourceId('Microsoft.DevTestLab/labs/virtualnetworks', parameters('labName'), variables('labVirtualNetworkName'))]",
         "labVirtualNetworkName": "DtlBocconiVLab",
         "vmId": "[resourceId ('Microsoft.DevTestLab/labs/virtualmachines', parameters('labName'), parameters('newVMName'))]",
