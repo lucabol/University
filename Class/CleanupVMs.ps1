@@ -4,7 +4,6 @@ param
     [Parameter(Mandatory=$true, HelpMessage="The name of the Dev Test Lab to clean up")]
     [string] $LabName,
 
-    # Credential path
     [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure Profile")]
     [string] $profilePath = "$env:APPDATA\AzProfile.txt"
 )
@@ -22,7 +21,8 @@ LoadProfile $profilePath
 # Used to disable progress bar when removing resource
 $notVerbose = $VerbosePreference -eq "SilentlyContinue"
 
-$allVms = Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs/virtualMachines" -ResourceNameContains $LabName
+$allVms = Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs/virtualMachines" -ResourceNameContains $LabName | where ResourceName -CLike "$LabName/*"
+
 $jobs = @()
 
 $deleteVmBlock = {

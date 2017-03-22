@@ -55,7 +55,7 @@ LoadProfile $profilePath
 # Set the Subscription ID
 $SubscriptionID = (Get-AzureRmContext).Subscription.SubscriptionId
 
-$ResourceGroupName = (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs" -ResourceNameContains $LabName).ResourceGroupName
+$ResourceGroupName = (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs" -ResourceNameContains $LabName  | where ResourceName -CEQ "$LabName").ResourceGroupName
 
 # Check to see if any VMs already exist in the lab. 
 # Assume if ANY VMs exist then 
@@ -64,7 +64,7 @@ $ResourceGroupName = (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/l
 #   thus the script should exit
 # 
 LogOutput "Checking for existing VMs in $LabName"
-$existingVMs = (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs/virtualMachines" -ResourceNameContains $newVMName -ResourceGroupNameContains $ResourceGroupName).Count
+$existingVMs = (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs/virtualMachines" -ResourceGroupNameContains $ResourceGroupName | where ResourceName -CLike "$LabName/*").Count
 
 if ($existingVMs -ne 0) {
     # Fatal error encountered. Log Error/Notify and Exit Script
