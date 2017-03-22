@@ -4,37 +4,38 @@ param
     [Parameter(Mandatory=$false, HelpMessage="The path to the Deployment Template File ")]
     [string] $TemplatePath = ".\MultiVMCustomImageTemplate.json",
 
-    # Instance Count
     [Parameter(Mandatory=$true, HelpMessage="Number of instances to create")]
     [int] $VMCount,
 
-    # Lab Name
     [Parameter(Mandatory=$true, HelpMessage="Name of Lab")]
     [string] $LabName,
 
-    # Base Image
     [Parameter(Mandatory=$true, HelpMessage="Name of base image in lab")]
     [string] $BaseImage,
 
-    # Image Size
     [Parameter(Mandatory=$false, HelpMessage="Size of VM image")]
     [string] $ImageSize = "Standard_DS2",    
 
-    # New VM name
     [Parameter(Mandatory=$false, HelpMessage="Prefix for new VMs")]
     [string] $newVMName = "studentlabvm",
 
-    # Start time for each "Session" to start
     [Parameter(Mandatory=$true, HelpMessage="Scheduled start time for class. In form of 'HH:mm'")]
     [string] $ClassStart,
 
-    # Duration for each VM to "live" before shutting off
     [Parameter(Mandatory=$true, HelpMessage="Time to live for VMs (in minutes)")]
     [int] $Duration,
 
-    # Credential path
     [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure Profile")]
-    [string] $profilePath = "$env:APPDATA\AzProfile.txt"
+    [string] $profilePath = "$env:APPDATA\AzProfile.txt",
+
+    [Parameter(Mandatory=$false, HelpMessage="How many VMs to create at a time")]
+    [int] $batchSize = 10,
+
+    [Parameter(Mandatory=$false, HelpMessage="How many times to retry when an error occurs")]
+    [int] $retries = 3,
+
+    [Parameter(Mandatory=$false, HelpMessage="Seconds between each batch deployment")]
+    [int] $batchDelay = 0   
 )
 
 $global:VerbosePreference = $VerbosePreference
@@ -88,59 +89,99 @@ $startTime = Get-Date $ClassStart
 $endTime = $startTime.AddMinutes($Duration).toString("HHmm")
 LogOutput "Class Start Time: $($startTime)    Class End Time: $($endTime)"
 
+# Calculate number of batches and reminder VMs
+$numberOfBatches = [math]::floor($VMCount / $batchSize)
+LogOutput "Number of batches: $numberOfBatches"
+$remindervms = $VMCount % $batchSize
+LogOutput "Reminder VMs: $remindervms"
+
 $parameters = @{}
-$parameters.Add("count",$VMCount)
+$parameters.Add("count",$batchSize)
 $parameters.Add("labName",$LabName)
-$parameters.Add("newVMName", $newVMName)
 $parameters.Add("size", $ImageSize)
 $parameters.Add("expirationDate", $ExpirationDate)
 $parameters.Add("imageName", $BaseImage)
 $parameters.Add("shutDownTime", $endTime)
 
-# deploy resources via template
-try {
-    LogOutput "Starting Deployment $deploymentName for lab $LabName"
-    $result.statusCode = "Started"
-    $result.statusMessage = "Beginning template deployment"
-    $vmDeployResult = New-AzureRmResourceGroupDeployment -Name $deploymentName -ResourceGroup $ResourceGroupName -TemplateFile $TemplatePath -TemplateParameterObject $parameters 
-} 
-catch {
-    $result.errorCode = $_.Exception.GetType().FullName
-    $result.errorMessage = $_.Exception.Message
-    LogError "Exception: $($result.errorCode) Message: $($result.errorMessage)"
+# Create an alphabet array to create unique names for VMs in batches
+$alph = @()
+65..90 | foreach-object { $alph+=[char]$_ }
+65..90 | foreach-object{
+    $ch = [char]$_
+    $alph += "$ch"
+    $alph += "$ch$ch"
+    $alph += "$ch$ch$ch"
+    $alph += "$ch$ch$ch$ch"   
 }
-finally {
-    #Even if we got an error from the deployment call, get the deployment operation statuses for more invformation
-    $ops = Get-AzureRmResourceGroupDeploymentOperation -DeploymentName $deploymentName -SubscriptionId $SubscriptionID -ResourceGroupName $ResourceGroupName
-    
-    $deploymentEval = ($ops | Where-Object {$_.properties.provisioningOperation -eq "EvaluateDeploymentOutput"}).Properties
-    
-    $result.statusCode = $deploymentEval.statusCode
-    $result.statusMessage = $deploymentEval.statusMessage    
+LogOutput $alph
 
-    # process each deployment operation. separate into succeeded and failed buckets    
-    ($ops | Where-Object {$_.properties.provisioningOperation -ne "EvaluateDeploymentOutput"}).Properties | ForEach-Object {        
-        $task = @{}
-        $task.name = $_.targetResource.ResourceName
-        $task.type = $_.targetResource.ResourceType
-        $task.statusCode = $_.targetResource.statusCode
-        $task.statusMessage= $_.targetResource.statusMessage
-        if ($_.provisioningState -eq "Succeeded") {                
-            $result.Succeeded += $task
-        } else {
-            $result.Failed += $task
-        }
-    }    
+# This simple nameing scheme works just for 103 batches top (consider you need one more for reminder VMs)
+if($numberOfBatches -gt ((26 * 4) - 1)) {
+    LogError "Lab $LabName contains $existingVMs existing VMs. Please clean up lab before creating new VMs"
+    Exit 1    
+}
 
-    $vmsCreated = ($result.Succeeded | Where-Object {$_.type -eq "Microsoft.DevTestLabs/labs/virtualmachines"}).Count
-    $subResourcesCreated = ($result.Succeeded | Where-Object {$_.type -ne "Microsoft.DevTestLabs/labs/virtualmachines"}).Count
-    
-    LogOutput "Status for VM creation in lab $($LabName): $($result.statusCode)"
-    LogOutput "Target VMs: $VMCount"
-    LogOutput "VMs Succesfully created: $vmsCreated"
-    LogOutput "VM Sub-Resources Succesfully created: $subResourcesCreated"
-    LogOutput "VMs Failed: $($result.Failed.Count)"
-    
+# Iterate for the specified number of batches plus one for the reminder vms
+for($i = 0; $i -lt $numberOfBatches + 1; $i++) {
+
+    # If it's the last time through the loop just create reminderVMs
+    if($i -eq $numberOfBatches) {
+        $parameters["count"] = $remindervms
+    }
+
+    # deploy resources via template
+    try {
+        LogOutput "$i Starting Deployment $deploymentName for lab $LabName"
+        $parameters["newVMName"] = $newVMName + $alph[$i]
+        $strParams = $parameters | Out-String
+        LogOutput "Params: $strParams"
+        $deploymentName = "$deploymentName$i"
+        LogOutput "Deployment Name: $deploymentName"
+        LogOutput "Resource Group: $ResourceGroupName"
+
+        $result.statusCode = "$i Started"
+        $result.statusMessage = "$i Beginning template deployment"
+        $vmDeployResult = New-AzureRmResourceGroupDeployment -Name $deploymentName -ResourceGroup $ResourceGroupName -TemplateFile $TemplatePath -TemplateParameterObject $parameters 
+        Start-sleep -s $batchDelay
+    } 
+    catch {
+        $result.errorCode = $_.Exception.GetType().FullName
+        $result.errorMessage = $_.Exception.Message
+        LogError "Exception: $($result.errorCode) Message: $($result.errorMessage)"
+    }
+    finally {
+        #Even if we got an error from the deployment call, get the deployment operation statuses for more invformation
+        $ops = Get-AzureRmResourceGroupDeploymentOperation -DeploymentName $deploymentName -SubscriptionId $SubscriptionID -ResourceGroupName $ResourceGroupName
+        
+        $deploymentEval = ($ops | Where-Object {$_.properties.provisioningOperation -eq "EvaluateDeploymentOutput"}).Properties
+        
+        $result.statusCode = $deploymentEval.statusCode
+        $result.statusMessage = $deploymentEval.statusMessage    
+
+        # process each deployment operation. separate into succeeded and failed buckets    
+        ($ops | Where-Object {$_.properties.provisioningOperation -ne "EvaluateDeploymentOutput"}).Properties | ForEach-Object {        
+            $task = @{}
+            $task.name = $_.targetResource.ResourceName
+            $task.type = $_.targetResource.ResourceType
+            $task.statusCode = $_.targetResource.statusCode
+            $task.statusMessage= $_.targetResource.statusMessage
+            if ($_.provisioningState -eq "Succeeded") {                
+                $result.Succeeded += $task
+            } else {
+                $result.Failed += $task
+            }
+        }    
+
+        $vmsCreated = ($result.Succeeded | Where-Object {$_.type -eq "Microsoft.DevTestLabs/labs/virtualmachines"}).Count
+        $subResourcesCreated = ($result.Succeeded | Where-Object {$_.type -ne "Microsoft.DevTestLabs/labs/virtualmachines"}).Count
+        
+        LogOutput "$i Status for VM creation in lab $($LabName): $($result.statusCode)"
+        LogOutput "$i Target VMs: $VMCount"
+        LogOutput "$i VMs Succesfully created: $vmsCreated"
+        LogOutput "$i VM Sub-Resources Succesfully created: $subResourcesCreated"
+        LogOutput "$i VMs Failed: $($result.Failed.Count)"
+        
+    }
 }
 
 LogOutput "Process complete"
