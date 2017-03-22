@@ -1,7 +1,8 @@
 ﻿Param
 (
-[Parameter(Mandatory=$True, HelpMessage="Resource group of the VMs")]
-[string] $ResourceGroupName
+ # Lab Name
+[Parameter(Mandatory=$true, HelpMessage="Name of Lab")]
+[string] $LabName
 )
 
 $VerbosePreference = "continue"
@@ -31,10 +32,25 @@ catch
     }
 }
 
+#we have to find the RG of the compute VM (different from the RG of the lab and the labVM)
 
-#Get all the VMs inside the lab
-#NOTE: the RG must be the one where the VMs are created (type: Microsoft.Compute/virtualMachines/), which is different from the RG of the lab
-$VirtualMachines = Get-AzureRmVM -ResourceGroupName $ResourceGroupName
+#get the RG of the lab
+$ResourceGroupName = (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs" -ResourceNameContains $LabName).ResourceGroupName
+
+#get the lab VMs
+$labVM=Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs/virtualMachines" -ResourceGroupName $ResourceGroupName
+
+#pick the first one and get its id
+$labVmId=$labVM[0].ResourceId
+
+#get the specific compute id from the labVmId
+$labVmComputeId=(Get-AzureRmResource -Id $labVmId).Properties.computeId
+
+#get the actual RG of the compute VM
+$labVmRGName=(Get-AzureRmResource -Id $labVmComputeID).resourcegroupname
+
+#Get all the compute VMs of the lab
+$VirtualMachines = Get-AzureRmVM -ResourceGroupName $labVmRGName
 
 
 foreach ($VM in $VirtualMachines)
@@ -42,7 +58,7 @@ foreach ($VM in $VirtualMachines)
     #get the VM status
 	#PowerState/deallocated = Stopped(deallocated)
 	#PowerState/stopped = Stopped (shutdown from the OS)
-    $VMStatus = (Get-AzureRmVM -ResourceGroupName $ResourceGroupName -Name $VM.Name -Status).Statuses.Code[1]
+    $VMStatus = (Get-AzureRmVM -ResourceGroupName $labVmRGName -Name $VM.Name -Status).Statuses.Code[1]
     
             Write-Verbose ("Status VM  "+ $VM.Name + " :" + $VMStatus)
             
@@ -54,10 +70,10 @@ foreach ($VM in $VirtualMachines)
             elseIf ($VMStatus -eq 'PowerState/stopped')
             {
                 #force the VM deallocation
-                $stopping = Stop-AzureRmVM -Name $VM.Name -ResourceGroupName $ResourceGroupName -Force
+                $stopping = Stop-AzureRmVM -Name $VM.Name -ResourceGroupName $labVmRGName -Force
 
                 #check again the VM status
-                $VMStatus = (Get-AzureRmVM -ResourceGroupName $ResourceGroupName -Name $VM.Name -Status).Statuses.Code[1]
+                $VMStatus = (Get-AzureRmVM -ResourceGroupName $labVmRGName -Name $VM.Name -Status).Statuses.Code[1]
 
                     if ($VMstatus -eq 'PowerState/deallocated')
                         
