@@ -52,7 +52,7 @@ try {
         $jobs += Start-Job -Name $vmName -ScriptBlock $deleteVmBlock -ArgumentList $credentialsKind,$profilePath, $vmName, $currentVm.ResourceId, $notVerbose, $HelperPath
     }
     if($jobs.count -ne 0) {
-        Wait-job -Job $jobs -Force
+        Wait-job -Job $jobs -Force | Write-Verbose
         LogOutput "VM Deletion jobs have completed"
     } else {
         LogOutput "No VMs to delete."

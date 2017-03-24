@@ -171,7 +171,7 @@ try {
             timeZoneId = $TimeZoneId
         }
     
-    New-AzureRmResourceGroupDeployment -Name $shutDeployment -ResourceGroupName $ResourceGroupName -TemplateFile $ShutdownPath -TemplateParameterObject $shutParams
+    New-AzureRmResourceGroupDeployment -Name $shutDeployment -ResourceGroupName $ResourceGroupName -TemplateFile $ShutdownPath -TemplateParameterObject $shutParams | Write-Verbose
     LogOutput "Shutdown time deployed."
 
     LogOutput "Start creating VMs ..."

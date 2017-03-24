@@ -45,7 +45,15 @@ function GetResourceGroupName {
 function GetAllLabVMs {
     [CmdletBinding()]
     param($LabName, $ResourceGroupName)
-    return Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs/virtualMachines" -ResourceGroupNameContains $ResourceGroupName | where ResourceName -CLike "$LabName/*"    
+
+    $SubscriptionID = (Get-AzureRmContext).Subscription.SubscriptionId
+    $lab = Get-AzureRmResource -ResourceId ('subscriptions/' + $SubscriptionID + '/resourceGroups/' + $ResourceGroupName + '/providers/Microsoft.DevTestLab/labs/' + $LabName)
+
+    $labVMs = Get-AzureRmResource | Where-Object {
+            $_.ResourceType -eq 'microsoft.devtestlab/labs/virtualmachines' -and
+            $_.ResourceName -like "$($lab.ResourceName)/*"}
+
+    return $LabVMs    
 }
 
 function LoadAzureCredentials {
