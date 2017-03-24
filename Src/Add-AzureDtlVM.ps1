@@ -131,7 +131,7 @@ try {
     
     LogOutput "Start provisioning ..."
 
-    LoadAzureCredentials $credentialsKind $profilePath
+    LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
 
     $startTime = (Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmss")
     LogOutput "StartTime: $startTime"
@@ -142,12 +142,12 @@ try {
 
     $SubscriptionID = (Get-AzureRmContext).Subscription.SubscriptionId
     LogOutput "Subscription id: $SubscriptionID"
-    $ResourceGroupName = GetResourceGroupName $LabName
+    $ResourceGroupName = GetResourceGroupName -labname $LabName
     LogOutput "Resource Group: $ResourceGroupName"
 
     # Check to see if any VMs already exist in the lab. 
 <#    LogOutput "Checking for existing VMs in $LabName"
-    $existingVMs = (GetAllLabVMs $LabName $ResourceGroupName).Count
+    $existingVMs = (GetAllLabVMs -labName $LabName -resourceGroupName $ResourceGroupName).Count
     if ($existingVMs -ne 0) {
         throw "Lab $LabName contains $existingVMs existing VMs. Please clean up lab before creating new VMs"
     }
