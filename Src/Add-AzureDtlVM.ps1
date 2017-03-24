@@ -1,8 +1,11 @@
 [cmdletbinding()]
 param 
 (
-    [Parameter(Mandatory=$false, HelpMessage="The path to the Deployment Template File ")]
+    [Parameter(Mandatory=$false, HelpMessage="Path to the Deployment Template File")]
     [string] $TemplatePath = ".\dtl_multivm_customimage.json",
+
+    [Parameter(Mandatory=$false, HelpMessage="Path to the Shutdown file")]
+    [string] $ShutdownPath = ".\dtl_shutdown.json",
 
     [Parameter(Mandatory=$true, HelpMessage="Number of instances to create")]
     [int] $VMCount,
@@ -133,7 +136,9 @@ try {
     $startTime = (Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmss")
     LogOutput "StartTime: $startTime"
     $deploymentName = "Deployment_$LabName_$startTime"
+    $shutDeployment = $deploymentName + "Shutdown"
     LogOutput "Deployment Name: $deploymentName"
+    LogOutput "Shutdown Deployment Name: $shutDeployment"
 
     $SubscriptionID = (Get-AzureRmContext).Subscription.SubscriptionId
     LogOutput "Subscription id: $SubscriptionID"
@@ -156,12 +161,23 @@ try {
     # Set the shutdown time
     $startTime = Get-Date $ClassStart
     $ShutDownTime = $startTime.AddMinutes($Duration).toString("HHmm")
-    LogOutput "Class Start Time: $($startTime)    Class End Time: $($endTime)"
+    LogOutput "Class Start Time: $($startTime)    Class End Time: $($ShutDownTime)"
+
+    LogOutput "Start deployment of Shutdown time ..."
+    # Change Shutdown time in lab
+    $shutParams = @{
+            newLabName = $LabName
+            shutDownTime = $ShutDownTime
+            timeZoneId = $TimeZoneId
+        }
+    
+    New-AzureRmResourceGroupDeployment -Name $shutDeployment -ResourceGroupName $ResourceGroupName -TemplateFile $ShutdownPath -TemplateParameterObject $shutParams
+    LogOutput "Shutdown time deployed."
 
     LogOutput "Start creating VMs ..."
     $labId = "/subscriptions/$SubscriptionId/resourcegroups/$ResourceGroupName/providers/Microsoft.DevTestLab/labs/$LabName"
     LogOutput "LabId: $labId"
-
+   
     $tokens = @{
         Count = $VMCount
         ExpirationDate = $ExpirationDate
