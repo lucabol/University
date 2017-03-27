@@ -39,7 +39,7 @@ function LogOutput {
 function GetResourceGroupName {
     [CmdletBinding()]
     param($LabName)
-    return (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs" -ResourceNameContains $LabName  | where ResourceName -CEQ "$LabName").ResourceGroupName    
+    return (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs" -ResourceNameContains $LabName  | where ResourceName -EQ "$LabName").ResourceGroupName    
 }
 
 function GetAllLabVMs {
