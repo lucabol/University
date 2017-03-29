@@ -150,12 +150,12 @@ function TestCommon {
     [CmdletBinding()]
     param()
     # Test isDtlVmClaimed
-<#    $labvmid = (GetLabId -SubscriptionID "d5e481ac-7346-47dc-9557-f405e1b3dcb0" -ResourceGroupName "stats" -labname "Stats") + "/virtualmachines/StudentVM"
+    $labvmid = (GetLabId -SubscriptionID "d5e481ac-7346-47dc-9557-f405e1b3dcb0" -ResourceGroupName "PhysicsRG999685" -labname "Physics") + "/virtualmachines/labvm2017032909033800"
     write-host $labvmid
     $props = GetDTLComputeProperties $labvmid
     write-host $props
     IsDtlVmClaimed $props
-#>
+
     Exec-With-Retry { LogOutput "In Success block"} -Verbose
     Exec-With-Retry { LogOutput "In Success block"} -successTest {return $currentRetry -eq 2} -Verbose
     Exec-With-Retry { throw "test"} -Verbose
