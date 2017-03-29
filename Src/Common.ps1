@@ -42,12 +42,21 @@ function GetResourceGroupName {
     return (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs" -ResourceNameContains $LabName  | where ResourceName -EQ "$LabName").ResourceGroupName    
 }
 
+function GetLabId {
+    [CmdletBinding()]
+    param($SubscriptionID, $LabName, $ResourceGroupName)
+
+    $labId = 'subscriptions/' + $SubscriptionID + '/resourceGroups/' + $ResourceGroupName + '/providers/Microsoft.DevTestLab/labs/' + $LabName
+    LogOutput("LabId: $labId")
+    return $labId
+}
+
 function GetAllLabVMs {
     [CmdletBinding()]
     param($LabName, $ResourceGroupName)
 
     $SubscriptionID = (Get-AzureRmContext).Subscription.SubscriptionId
-    $lab = Get-AzureRmResource -ResourceId ('subscriptions/' + $SubscriptionID + '/resourceGroups/' + $ResourceGroupName + '/providers/Microsoft.DevTestLab/labs/' + $LabName)
+    $lab = Get-AzureRmResource -ResourceId (GetLabId -subscriptionID $SubscriptionID -resourceGroupName $ResourceGroupName -LabName $LabName)
 
     $labVMs = Get-AzureRmResource | Where-Object {
             $_.ResourceType -eq 'microsoft.devtestlab/labs/virtualmachines' -and
@@ -87,3 +96,70 @@ function LoadAzureCredentials {
         Set-AzureRmContext -SubscriptionId $SubId                      
     } 
 }
+
+function GetDTLComputeProperties {
+    [CmdletBinding()]
+    param($LabVmId)
+
+    $propRes = Get-AzureRmResource -ResourceId $LabVMId -ODataQuery '$expand=Properties($expand=ComputeVm,ApplicableSchedule)'
+    LogOutput("Compute Properties: $propRes")
+    return $propRes.Properties
+}
+
+function IsDtlVmClaimed {
+    [CmdletBinding()]
+    param($props)
+
+    return !$props.AllowClaim -and $props.OwnerObjectId
+}
+
+function Exec-With-Retry {
+    [CmdletBinding()]
+    param(    
+    [Parameter(ValueFromPipeline,Mandatory)] $Command,
+    $successTest = { return $true},   
+    $RetryDelay = 1,
+    $MaxRetries = 5
+    )
+    
+    $currentRetry = 0
+    $success = $false
+    $cmd = $Command.ToString()
+
+    do {
+        try
+        {
+            LogOutput "Executing [$command]"
+            & $Command
+            $success = & $successTest
+            if(!$success) { throw "Go to catch block"}
+        }
+        catch [System.Exception]
+        {
+            $currentRetry = $currentRetry + 1
+            LogOutput "[$command] executed $currentRetry times"                      
+            if ($currentRetry -gt $MaxRetries) {                
+                throw "Could not execute [$command]. The error: " + $_.Exception.ToString()
+            }
+            Start-Sleep -s $RetryDelay
+        }
+    } while (!$success);
+}
+
+function TestCommon {
+    [CmdletBinding()]
+    param()
+    # Test isDtlVmClaimed
+<#    $labvmid = (GetLabId -SubscriptionID "d5e481ac-7346-47dc-9557-f405e1b3dcb0" -ResourceGroupName "stats" -labname "Stats") + "/virtualmachines/StudentVM"
+    write-host $labvmid
+    $props = GetDTLComputeProperties $labvmid
+    write-host $props
+    IsDtlVmClaimed $props
+#>
+    Exec-With-Retry { LogOutput "In Success block"} -Verbose
+    Exec-With-Retry { LogOutput "In Success block"} -successTest {return $currentRetry -eq 2} -Verbose
+    Exec-With-Retry { throw "test"} -Verbose
+    
+}
+
+#TestCommon
