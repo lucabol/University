@@ -91,9 +91,18 @@ function Create-VirtualMachines
         [hashtable] $Tokens
     )
 
-    $path = Resolve-Path $path
+    if ($credentialsKind -eq "File"){
+        $path = Resolve-Path $path
 
-    $content = [IO.File]::ReadAllText($path)
+        $content = [IO.File]::ReadAllText($path)
+
+        }
+    elseif ($credentialsKind -eq "Runbook"){
+
+        $file = Invoke-WebRequest -Uri $path -UseBasicParsing
+        $content = $file.Content
+    }
+
     $json = Create-ParamsJson -Content $content -Tokens $tokens
     LogOutput $json
 
@@ -126,8 +135,11 @@ function Replace-Tokens
 }
 
 try {
-    # Import common functions
-    . "./Common.ps1"
+
+    if ($credentialsKind -eq "File"){
+        # Import common functions
+        . "./Common.ps1"
+    }
     
     LogOutput "Start provisioning ..."
 
