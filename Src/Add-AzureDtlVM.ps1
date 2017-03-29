@@ -20,7 +20,7 @@ param
     [string] $Size = "Standard_DS2",    
 
     [Parameter(Mandatory=$false, HelpMessage="Prefix for new VMs")]
-    [string] $VMNameBase = "labvm" + (Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmss"),
+    [string] $VMNameBase = "vm" + (Get-Random).ToString(),
 
     [Parameter(Mandatory=$true, HelpMessage="Scheduled start time for class. In form of 'HH:mm'")]
     [string] $ClassStart,
