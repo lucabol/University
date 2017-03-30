@@ -113,6 +113,13 @@ function IsDtlVmClaimed {
     return !$props.AllowClaim -and $props.OwnerObjectId
 }
 
+function GetComputeGroup {
+    [CmdletBinding()]
+    param($props)
+
+    return ($props.ComputeId -split "/")[4]    
+}
+
 function Exec-With-Retry {
     [CmdletBinding()]
     param(    
@@ -146,20 +153,38 @@ function Exec-With-Retry {
     } while (!$success);
 }
 
+function TestVMComputeId {
+    $labName = "Physics"
+    $resourcegroupname = GetResourceGroupName -LabName $labName
+    write-host $resourcegroupname
+    $vms = GetAllLabVMs -LabName $labName -ResourceGroupName $resourcegroupname
+    write-host $vms[0]
+}
 function TestCommon {
     [CmdletBinding()]
     param()
     # Test isDtlVmClaimed
-    $labvmid = (GetLabId -SubscriptionID "d5e481ac-7346-47dc-9557-f405e1b3dcb0" -ResourceGroupName "PhysicsRG999685" -labname "Physics") + "/virtualmachines/labvm2017032909033800"
+    #$labvmid = "subscriptions/d5e481ac-7346-47dc-9557-f405e1b3dcb0/resourceGroups/PhysicsRG999685/providers/Microsoft.DevTestLab/labs/Physics/virtualmachines/vm164442610600"
+    $labvmid = "subscriptions/d5e481ac-7346-47dc-9557-f405e1b3dcb0/resourceGroups/PhysicsRG999685/providers/Microsoft.DevTestLab/labs/Physics/virtualmachines/labvm2017032909033800"
+
     write-host $labvmid
     $props = GetDTLComputeProperties $labvmid
-    write-host $props
-    IsDtlVmClaimed $props
 
-    Exec-With-Retry { LogOutput "In Success block"} -Verbose
-    Exec-With-Retry { LogOutput "In Success block"} -successTest {return $currentRetry -eq 2} -Verbose
-    Exec-With-Retry { throw "test"} -Verbose
+    $gr = GetComputeGroup -props $props
+    $what = $gr -eq ""
+    write-host "What: $what"
+
+    IsDtlVmClaimed $props
+    $compid = $props.ComputeId
+    write-host "Compute id: $compid"
+    $compGroup = ($compid -split "/")[4]
+    write-host $compGroup
+
+    # Exec-With-Retry { LogOutput "In Success block"} -Verbose
+    # Exec-With-Retry { LogOutput "In Success block"} -successTest {return $currentRetry -eq 2} -Verbose
+    # Exec-With-Retry { throw "test"} -Verbose
     
 }
 
 #TestCommon
+#TestVMComputeId
