@@ -1,9 +1,33 @@
-﻿#s$ErrorActionPreference = "Stop"
+﻿
 
-$info = Get-AzureRmStorageAccount -Name backupbocconiimagelab -ResourceGroupName backupVLAB | Get-AzureStorageContainer | Get-AzureStorageBlob -Blob Shutdown*
+[cmdletbinding()]
+param
+(
+    [Parameter(Mandatory=$false, HelpMessage="The name of the destination folder for the XML file")]
+    [string] $folder = "C:\Users\SuperUser\Documents\WindowsPowerShell",
 
-Get-AzureStorageBlobContent -Container upload -Blob $info.Name -Destination "C:\" -Context $info.Context -Force -ErrorAction Stop
+    [Parameter(Mandatory=$false, HelpMessage="The name of the XML file containing the definition of the task")]
+    [string] $filename = "ShutdownOnIdle",
 
-schtasks.exe /delete /TN "Shutdown on idle" /f
+    [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure Profile")]
+    [string] $profilePath = “C:\Users\SuperUser\AppData\Roaming\AzProfile.txt”
+)
 
-schtasks.exe /create /TN "Shutdown on idle" /XML "C:\Shutdown on idle.xml"
+$ErrorActionPreference = "Stop"
+
+Select-AzureRmProfile -Path $profilePath | Out-Null
+Write-Host "Successfully logged in using saved profile file" -ForegroundColor Green
+
+$info = Get-AzureRmStorageAccount -Name backupbocconiimagelab -ResourceGroupName backupVLAB | Get-AzureStorageContainer | Get-AzureStorageBlob -Blob $filename*
+    
+Get-AzureStorageBlobContent -Container upload -Blob $info.Name -Destination $folder -Context $info.Context -Force -ErrorAction Stop
+
+$filepath = $folder +"\"+ $filename +".xml"
+
+schtasks.exe /delete /TN $filename /f
+    
+schtasks.exe /create /TN $filename /XML $filepath
+
+
+
+
