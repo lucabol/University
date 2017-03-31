@@ -74,6 +74,10 @@ function TestMany {
     $resourceGroupName = "AfterMDiskRG237826"
     $vms = GetAllLabVMs -labName $labName -resourcegroupname $resourceGroupName
     Write-host $vms.count
+    $labName = "Stats"
+    $resourceGroupName = "Stats"
+    $vms = GetAllLabVMs -labName $labName -resourcegroupname $resourceGroupName
+    Write-host $vms.count
     
 }
 TestMany

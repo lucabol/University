@@ -141,7 +141,6 @@ try {
     }
 
     if ($credentialsKind -eq "File"){
-        # Import common functions
         . "./Common.ps1"
     }
     
@@ -216,10 +215,16 @@ try {
 
     # Iterating lops time
     for($i = 0; $i -lt $loops; $i++) {
-        $tokens["Name"] = $VMNameBase + $i.ToString()
-        LogOutput "Processing batch: $i"
-        Create-VirtualMachines -LabId $labId -Tokens $tokens -path $TemplatePath
-        LogOutput "Finished processing batch: $i"
+        try {
+            $tokens["Name"] = $VMNameBase + $i.ToString()
+            LogOutput "Processing batch: $i"
+            Create-VirtualMachines -LabId $labId -Tokens $tokens -path $TemplatePath
+            LogOutput "Finished processing batch: $i"
+        } catch {
+            $posMessage = $_.ToString() + "`n" + $_.InvocationInfo.PositionMessage
+            Write-Host -Object "`nERROR: $posMessage" -ForegroundColor Red
+            Write-Host "Moving on to next batch after error"            
+        }
     }
 
     # Process reminder

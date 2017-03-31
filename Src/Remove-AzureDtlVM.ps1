@@ -11,15 +11,17 @@ param
     [string] $profilePath = "$env:APPDATA\AzProfile.txt",
 
     [Parameter(Mandatory=$false, HelpMessage="How many VMs to delete in parallel")]
-    [string] $parallelDeletion = 10
+    [string] $parallelDeletion = 20
     
 )
 
 try {
-    . ./Common.ps1
+    if ($credentialsKind -eq "File"){
+        . "./Common.ps1"
+    }
 
     LogOutput "Start Removal"
-    # Load the credentials
+
     LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
 
     # Used to disable progress bar when removing resource
@@ -28,36 +30,10 @@ try {
     $ResourceGroupName = GetResourceGroupName -labname $LabName
     LogOutput "Resource Group: $ResourceGroupName"
 
-    $allVms = GetAllLabVMs -labname $LabName -resourcegroupname $ResourceGroupName
+    [array] $allVms = GetAllLabVMs -labname $LabName -resourcegroupname $ResourceGroupName
 
     $HelperPath = Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "Common.ps1"
     LogOutput $HelperPath
-
-    # First find all compute groups for the VMs
-    $set = New-Object System.Collections.Generic.HashSet[string]
-
-    foreach ($currentVm in $allVms){
-        LogOutput "CurrentVM: $currentVm"
-        $vmName = $currentVm.ResourceName
-
-        $SubscriptionID = (Get-AzureRmContext).Subscription.SubscriptionId
-        $vmId = $currentVM.ResourceId
-        LogOutput "VmId: $vmId"
-        
-        $props = GetDTLComputeProperties -labvmid $vmId
-        LogOutput "Props: $props"
-        $gr = GetComputeGroup -props $props
-        LogOutput "Compute Group Id: $gr"
-        if($gr -ne "") {
-            $set.Add($gr) | Out-Null
-        }
-    }
-
-    # Then delete all compute groups found (could be done in parallel)
-    foreach ($grName in $set){
-        LogOutput "Started deletion of resource group: $grName"
-        Remove-AzureRmResourceGroup -Name $grName -Force -ErrorAction SilentlyContinue | Out-Null
-    }
 
     # Then delete all the vms in parallel
     $deleteVmBlock = {
@@ -74,7 +50,6 @@ try {
         Remove-AzureRmResource -ResourceId $resourceId -ApiVersion 2016-05-15 -Force | Out-Null
     }
 
-    $allVms = @($allVms) # PS magick to convert object to array, otherwise it automatically convert 1 sized array to the object contained.
     $vmcount = $allVms.Length
     $loops = [math]::Floor($vmcount / $parallelDeletion)
     $rem = $vmcount - $loops * $parallelDeletion
