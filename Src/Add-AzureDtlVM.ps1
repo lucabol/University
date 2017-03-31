@@ -214,14 +214,21 @@ try {
     $rem = $VMCount - $loops * $BatchSize
     LogOutput "VMCount: $vmcount, Loops: $loops, Rem: $rem"
 
-    # Iterating one more time to create the $rem VMs
-    for($i = 0; $i -le $loops; $i++) {
+    # Iterating lops time
+    for($i = 0; $i -lt $loops; $i++) {
+        $tokens["Name"] = $VMNameBase + $i.ToString()
         LogOutput "Processing batch: $i"
-        if($i -eq $loops) {
-            $tokens["Count"] = $rem
-        }
         Create-VirtualMachines -LabId $labId -Tokens $tokens -path $TemplatePath
         LogOutput "Finished processing batch: $i"
+    }
+
+    # Process reminder
+    if($rem -ne 0) {
+        LogOutput "Processing reminder"
+        $tokens["Name"] = $VMNameBase + "Rm"
+        $tokens["Count"] = $rem
+        Create-VirtualMachines -LabId $labId -Tokens $tokens -path $TemplatePath
+        LogOutput "Finished processing reminder"
     }
     LogOutput "All done!"
 
