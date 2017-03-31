@@ -44,9 +44,10 @@ param
     [string] $location = "westeurope",
 
     [Parameter(Mandatory=$false, HelpMessage="TimeZone for machines")]
-    [string] $TimeZoneId = "Central European Standard Time"
-    
-      
+    [string] $TimeZoneId = "Central European Standard Time",
+
+    [Parameter(Mandatory=$false, HelpMessage="How many VMs to create in each batch")]
+    [int] $BatchSize = 75     
 )
 
 function ConvertTo-Hashtable
@@ -135,6 +136,9 @@ function Replace-Tokens
 }
 
 try {
+    if($BatchSize -gt 100) {
+        throw "BatchSize must be less or equal to 100"
+    }
 
     if ($credentialsKind -eq "File"){
         # Import common functions
@@ -191,7 +195,7 @@ try {
     LogOutput "LabId: $labId"
    
     $tokens = @{
-        Count = $VMCount
+        Count = $BatchSize
         ExpirationDate = $ExpirationDate
         ImageName = "/subscriptions/$SubscriptionID/ResourceGroups/$ResourceGroupName/providers/Microsoft.DevTestLab/labs/$LabName/customImages/$ImageName"
         LabName = $LabName
@@ -206,7 +210,19 @@ try {
         VirtualNetworkName = $VNetName
     }
 
-    Create-VirtualMachines -LabId $labId -Tokens $tokens -path $TemplatePath
+    $loops = [math]::Floor($VMCount / $BatchSize)
+    $rem = $VMCount - $loops * $BatchSize
+    LogOutput "VMCount: $vmcount, Loops: $loops, Rem: $rem"
+
+    # Iterating one more time to create the $rem VMs
+    for($i = 0; $i -le $loops; $i++) {
+        LogOutput "Processing batch: $i"
+        if($i -eq $loops) {
+            $tokens["Count"] = $rem
+        }
+        Create-VirtualMachines -LabId $labId -Tokens $tokens -path $TemplatePath
+        LogOutput "Finished processing batch: $i"
+    }
     LogOutput "All done!"
 
 } finally {
