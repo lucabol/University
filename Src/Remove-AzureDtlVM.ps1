@@ -11,7 +11,7 @@ param
     [string] $profilePath = "$env:APPDATA\AzProfile.txt",
 
     [Parameter(Mandatory=$false, HelpMessage="How many VMs to delete in parallel")]
-    [string] $parallelDeletion = 20
+    [string] $parallelDeletion = 10
     
 )
 

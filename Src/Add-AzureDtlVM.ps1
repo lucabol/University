@@ -47,7 +47,7 @@ param
     [string] $TimeZoneId = "Central European Standard Time",
 
     [Parameter(Mandatory=$false, HelpMessage="How many VMs to create in each batch")]
-    [int] $BatchSize = 75     
+    [int] $BatchSize = 50     
 )
 
 function ConvertTo-Hashtable
@@ -213,7 +213,7 @@ try {
     $rem = $VMCount - $loops * $BatchSize
     LogOutput "VMCount: $vmcount, Loops: $loops, Rem: $rem"
 
-    # Iterating lops time
+    # Iterating loops time
     for($i = 0; $i -lt $loops; $i++) {
         try {
             $tokens["Name"] = $VMNameBase + $i.ToString()
