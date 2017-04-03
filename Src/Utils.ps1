@@ -36,10 +36,6 @@ function Exec-With-Retry {
 function TestVMComputeId {
 
     $labName = "TestCreationFix"
-    $lab = GetLab -labName $labName
-    write-host "lab: $lab"
-    $resourcegroupname = GetResourceGroupName -LabName $labName
-    write-host "RGN: $resourcegroupname"
     $vms = GetAllLabVMs -LabName $labName 
     write-host $vms[0]
 }

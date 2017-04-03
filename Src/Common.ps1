@@ -59,7 +59,7 @@ function GetLabId {
     return $labId
 }
 
-function Get-GetAllLabVMs {
+function GetAllLabVMs {
     [CmdletBinding()]
     param($LabName)
     
