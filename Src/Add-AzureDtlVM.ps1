@@ -162,7 +162,7 @@ try {
 
     # Check to see if any VMs already exist in the lab. 
 <#    LogOutput "Checking for existing VMs in $LabName"
-    $existingVMs = (GetAllLabVMs -labName $LabName -resourceGroupName $ResourceGroupName).Count
+    $existingVMs = (GetAllLabVMs -labName $LabName).Count
     if ($existingVMs -ne 0) {
         throw "Lab $LabName contains $existingVMs existing VMs. Please clean up lab before creating new VMs"
     }

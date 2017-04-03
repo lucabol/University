@@ -30,7 +30,7 @@ try {
     $ResourceGroupName = GetResourceGroupName -labname $LabName
     LogOutput "Resource Group: $ResourceGroupName"
 
-    [array] $allVms = GetAllLabVMs -labname $LabName -resourcegroupname $ResourceGroupName
+    [array] $allVms = GetAllLabVMs -labname $LabName
 
     $HelperPath = Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "Common.ps1"
     LogOutput $HelperPath
@@ -39,7 +39,9 @@ try {
     $deleteVmBlock = {
         Param ($credentialsKind, $ProfilePath, $vmName, $resourceId, $notVerbose, $HelperPath)
 
-        . $HelperPath
+        if ($credentialsKind -eq "File"){
+            . "./Common.ps1"
+        }
 
         if($notVerbose) {
             $ProgressPreference = "SilentlyContinue" # disable progress bar if not verbose

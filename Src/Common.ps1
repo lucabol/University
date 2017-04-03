@@ -36,10 +36,18 @@ function LogOutput {
     Write-Verbose $output
 }
 
+function GetLab {
+    [CmdletBinding()]
+    param($LabName)
+    $lab = Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs" -ResourceNameContains $LabName  | where ResourceName -EQ "$LabName"
+    LogOutput "Lab: $lab"
+    return $lab
+}
+
 function GetResourceGroupName {
     [CmdletBinding()]
     param($LabName)
-    return (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs" -ResourceNameContains $LabName  | where ResourceName -EQ "$LabName").ResourceGroupName    
+    return (GetLab -labname $LabName).ResourceGroupName    
 }
 
 function GetLabId {
@@ -51,19 +59,13 @@ function GetLabId {
     return $labId
 }
 
-function GetAllLabVMs {
+function Get-GetAllLabVMs {
     [CmdletBinding()]
-    param($LabName, $ResourceGroupName)
+    param($LabName)
+    
+    return Find-AzureRmResource -ResourceType 'Microsoft.DevTestLab/labs/virtualmachines' -ResourceNameContains "$LabName/" | ? { $_.ResourceName -like "$LabName/*" }
+} 
 
-    $SubscriptionID = (Get-AzureRmContext).Subscription.SubscriptionId
-    $lab = Get-AzureRmResource -ResourceId (GetLabId -subscriptionID $SubscriptionID -resourceGroupName $ResourceGroupName -LabName $LabName)
-
-    $labVMs = Get-AzureRmResource | Where-Object {
-            $_.ResourceType -eq 'microsoft.devtestlab/labs/virtualmachines' -and
-            $_.ResourceName -like "$($lab.ResourceName)/*"}
-
-    return $LabVMs    
-}
 
 function LoadAzureCredentials {
     [CmdletBinding()]
