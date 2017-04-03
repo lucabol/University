@@ -47,7 +47,11 @@ param
     [string] $TimeZoneId = "Central European Standard Time",
 
     [Parameter(Mandatory=$false, HelpMessage="How many VMs to create in each batch")]
-    [int] $BatchSize = 50     
+    [int] $BatchSize = 50,
+
+    [Parameter(Mandatory=$false, HelpMessage="Fail if existing VMs in the lab")]
+    [switch] $FailIfExiting
+        
 )
 
 function ConvertTo-Hashtable
@@ -160,14 +164,16 @@ try {
     $ResourceGroupName = GetResourceGroupName -labname $LabName
     LogOutput "Resource Group: $ResourceGroupName"
 
-    # Check to see if any VMs already exist in the lab. 
-<#    LogOutput "Checking for existing VMs in $LabName"
-    $existingVMs = (GetAllLabVMs -labName $LabName).Count
-    if ($existingVMs -ne 0) {
-        throw "Lab $LabName contains $existingVMs existing VMs. Please clean up lab before creating new VMs"
+    if($FailIfExiting) {
+        # Check to see if any VMs already exist in the lab. 
+        LogOutput "Checking for existing VMs in $LabName"
+        $existingVMs = (GetAllLabVMs -labName $LabName).Count
+        if ($existingVMs -ne 0) {
+            throw "Lab $LabName contains $existingVMs existing VMs. Please clean up lab before creating new VMs"
+        }
+        LogOutput "No existing VMs in $LabName"
     }
-    LogOutput "No existing VMs in $LabName"
-#>
+    
     # Set the expiration Date
     $UniversalDate = (Get-Date).ToUniversalTime()
     $ExpirationDate = $UniversalDate.AddDays(1).ToString("yyyy-MM-dd")

@@ -67,19 +67,20 @@ function TestCommon {
     
 }
 function TestMany {
-    $labName = "VMDiskNat"
-    $resourceGroupName = "VMDiskNatRG494167"
-    $vms = GetAllLabVMs -labName $labName
-    Write-host $vms.count
-    $labName = "AfterMDisk"
-    $resourceGroupName = "AfterMDiskRG237826"
-    $vms = GetAllLabVMs -labName $labName 
-    Write-host $vms.count
+    # $labName = "VMDiskNat"
+    # $vms = GetAllLabVMs -labName $labName
+    # Write-host $vms.count
+    # $labName = "AfterMDisk"
+    # $vms = GetAllLabVMs -labName $labName 
+    # Write-host $vms.count
     $labName = "TestCreationFix"
-    $resourceGroupName = "TestCreationFixRG893172"
-    $vms = GetAllLabVMs -labName $labName 
+    $vms = GetAllLabVMsWithCompute -labName $labName 
     Write-host $vms.count
+
+    $failedVms = $vms | ? { IsProvisioningFailed($_.Properties) }
+    $failedVms | % {write-host $_.ResourceName}
+
 }
 TestMany
 #TestCommon
-TestVMComputeId
+#TestVMComputeId

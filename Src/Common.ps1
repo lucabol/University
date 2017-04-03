@@ -66,6 +66,13 @@ function GetAllLabVMs {
     return Find-AzureRmResource -ResourceType 'Microsoft.DevTestLab/labs/virtualmachines' -ResourceNameContains "$LabName/" | ? { $_.ResourceName -like "$LabName/*" }
 } 
 
+# Hideously slow. Is there a way to retrieve it bulk? btw: just adding OData query to Find-AzureRmResource doesn't work
+function GetAllLabVMsWithCompute {
+    [CmdletBinding()]
+    param($LabName)
+    $vms = GetAllLabVms -LabName $LabName
+    return $vms | % { Get-AzureRmResource -ResourceId $_.ResourceId -ODataQuery '$expand=Properties($expand=ComputeVm)' | ? { $_.ResourceName -like "$LabName/*" } }
+} 
 
 function LoadAzureCredentials {
     [CmdletBinding()]
@@ -113,6 +120,13 @@ function IsDtlVmClaimed {
     param($props)
 
     return !$props.AllowClaim -and $props.OwnerObjectId
+}
+
+function IsProvisioningFailed {
+    [CmdletBinding()]
+    param($props)
+
+    return $props.provisioningState -eq 'Failed'   
 }
 
 function GetComputeGroup {
