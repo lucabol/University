@@ -1,3 +1,5 @@
+#### General PS settings.
+
 $ErrorActionPreference = "Stop"
 pushd $PSScriptRoot
 
@@ -36,6 +38,42 @@ function LogOutput {
     Write-Verbose $output
 }
 
+#### Azure helper functions.
+
+function LoadAzureCredentials {
+    [CmdletBinding()]
+    param($credentialsKind, $profilePath)
+
+    LogOutput "Credentials Kind: $credentialsKind"
+    LogOutput "Credentials File: $profilePath"
+
+    if(($credentialsKind -ne "File") -and ($credentialsKind -ne "RunBook")) {
+        throw "CredentialsKind must be either 'File' or 'RunBook'. It was $credentialsKind instead"
+    }
+
+    if($credentialsKind -eq "File") {
+        if (! (Test-Path $profilePath)) {
+            throw "Profile file(s) not found at $profilePath. Exiting script..."    
+        }
+        Select-AzureRmProfile -Path $profilePath | Out-Null
+    } else {
+        $connectionName = "AzureRunAsConnection"
+        $SubId = Get-AutomationVariable -Name 'SubscriptionId'
+
+        $servicePrincipalConnection = Get-AutomationConnection -Name $connectionName         
+
+        Add-AzureRmAccount `
+            -ServicePrincipal `
+            -TenantId $servicePrincipalConnection.TenantId `
+            -ApplicationId $servicePrincipalConnection.ApplicationId `
+            -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint
+        
+        Set-AzureRmContext -SubscriptionId $SubId                      
+    } 
+}
+
+#### DTL Helper functions
+
 function GetLab {
     [CmdletBinding()]
     param($LabName)
@@ -73,38 +111,6 @@ function GetAllLabVMsWithCompute {
     $vms = GetAllLabVms -LabName $LabName
     return $vms | % { Get-AzureRmResource -ResourceId $_.ResourceId -ODataQuery '$expand=Properties($expand=ComputeVm)' | ? { $_.ResourceName -like "$LabName/*" } }
 } 
-
-function LoadAzureCredentials {
-    [CmdletBinding()]
-    param($credentialsKind, $profilePath)
-
-    LogOutput "Credentials Kind: $credentialsKind"
-    LogOutput "Credentials File: $profilePath"
-
-    if(($credentialsKind -ne "File") -and ($credentialsKind -ne "RunBook")) {
-        throw "CredentialsKind must be either 'File' or 'RunBook'. It was $credentialsKind instead"
-    }
-
-    if($credentialsKind -eq "File") {
-        if (! (Test-Path $profilePath)) {
-            throw "Profile file(s) not found at $profilePath. Exiting script..."    
-        }
-        Select-AzureRmProfile -Path $profilePath | Out-Null
-    } else {
-        $connectionName = "AzureRunAsConnection"
-        $SubId = Get-AutomationVariable -Name 'SubscriptionId'
-
-        $servicePrincipalConnection = Get-AutomationConnection -Name $connectionName         
-
-        Add-AzureRmAccount `
-            -ServicePrincipal `
-            -TenantId $servicePrincipalConnection.TenantId `
-            -ApplicationId $servicePrincipalConnection.ApplicationId `
-            -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint
-        
-        Set-AzureRmContext -SubscriptionId $SubId                      
-    } 
-}
 
 function GetDTLComputeProperties {
     [CmdletBinding()]
