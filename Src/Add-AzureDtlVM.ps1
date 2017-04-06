@@ -20,7 +20,7 @@ param
     [string] $Size = "Standard_DS2",    
 
     [Parameter(Mandatory=$false, HelpMessage="Prefix for new VMs")]
-    [string] $VMNameBase = "vm" + (Get-Random -maximum 999999999).ToString(),
+    [string] $VMNameBase = "vm",
 
     [Parameter(Mandatory=$true, HelpMessage="Scheduled start time for class. In form of 'HH:mm'")]
     [string] $ClassStart,
@@ -200,6 +200,14 @@ try {
     $labId = "/subscriptions/$SubscriptionId/resourcegroups/$ResourceGroupName/providers/Microsoft.DevTestLab/labs/$LabName"
     LogOutput "LabId: $labId"
    
+    # Create unique name base for this deployment by taking the current time in seconds from a startDate, for the sake of using less characters
+    # as the max number of characters in an Azure vm name is 16. This algo should produce vmXXXXXXXX (10 chars) leaving 6 chars free for the VM number
+    $baseDate = get-date -date "01-01-2016"
+    $ticksFromBase = (get-date).ticks - $baseDate.Ticks
+    $secondsFromBase = [math]::Floor($ticksFromBase / 10000000)
+    $VMNameBase = $VMNameBase + $secondsFromBase.ToString()
+    LogOutput "Base Name $VMNameBase"
+
     $tokens = @{
         Count = $BatchSize
         ExpirationDate = $ExpirationDate
