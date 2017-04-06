@@ -20,7 +20,7 @@ param
     [string] $Size = "Standard_DS2",    
 
     [Parameter(Mandatory=$false, HelpMessage="Prefix for new VMs")]
-    [string] $VMNameBase = "vm" + (Get-Random).ToString(),
+    [string] $VMNameBase = "vm" + (Get-Random -maximum 999999999).ToString(),
 
     [Parameter(Mandatory=$true, HelpMessage="Scheduled start time for class. In form of 'HH:mm'")]
     [string] $ClassStart,
@@ -152,6 +152,7 @@ try {
 
     LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
 
+    # Create deployment names
     $startTime = (Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmss")
     LogOutput "StartTime: $startTime"
     $deploymentName = "Deployment_$LabName_$startTime"
@@ -173,7 +174,7 @@ try {
         }
         LogOutput "No existing VMs in $LabName"
     }
-    
+
     # Set the expiration Date
     $UniversalDate = (Get-Date).ToUniversalTime()
     $ExpirationDate = $UniversalDate.AddDays(1).ToString("yyyy-MM-dd")
