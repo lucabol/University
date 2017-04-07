@@ -16,7 +16,6 @@ param
 
 $credentialsKind = InferCredentials
 LogOutput "Credentials kind: $credentialsKind"
-exit 1
 
 if ($credentialsKind -eq "File"){
         $ScriptDir = Split-Path -Path $MyInvocation.MyCommand.Path -Parent
