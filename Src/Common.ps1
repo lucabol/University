@@ -40,6 +40,18 @@ function LogOutput {
 
 #### Azure helper functions.
 
+function InferCredentials {
+    [CmdletBinding()]
+    param()
+
+    if($PSPrivateMetadata.JobId) {
+        return "Runbook"
+    }
+    else {
+        return "File"
+    }
+}
+
 function LoadAzureCredentials {
     [CmdletBinding()]
     param($credentialsKind, $profilePath)

@@ -4,9 +4,6 @@ param
     [Parameter(Mandatory=$true, HelpMessage="The name of the Dev Test Lab to clean up")]
     [string] $LabName,
 
-    [Parameter(Mandatory=$true, HelpMessage="Which credential type to use (either File or Runbook)")]
-    [string] $credentialsKind,
-
     [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure Profile")]
     [string] $profilePath = "$env:APPDATA\AzProfile.txt",
 
@@ -16,6 +13,8 @@ param
 )
 
 try {
+    $credentialsKind = InferCredentials
+
     if ($credentialsKind -eq "File"){
         . "./Common.ps1"
     }
@@ -49,7 +48,7 @@ try {
 
         LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
         Write-Host "Deleting VM $resourceId"
-        Remove-AzureRmResource -ResourceId $resourceId -ApiVersion 2016-05-15 -Force | Out-Null
+        $null = Remove-AzureRmResource -ResourceId $resourceId -Force
     }
 
     $vmcount = $allVms.Length

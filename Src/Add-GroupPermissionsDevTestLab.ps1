@@ -10,15 +10,15 @@ param
     [Parameter(Mandatory=$false, HelpMessage="The role definition name")]
     [string] $role = "Bocconi DevTest Labs User",
 
-    [Parameter(Mandatory=$false, HelpMessage="Which credential type to use (either File or Runbook)")]
-    [string] $credentialsKind = "File",
-
     [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure Profile")]
     [string] $profilePath = "$env:APPDATA\AzProfile.txt"
 )
 
+$credentialsKind = InferCredentials
+LogOutput "Credentials kind: $credentialsKind"
+exit 1
+
 if ($credentialsKind -eq "File"){
-        # Import common functions
         $ScriptDir = Split-Path -Path $MyInvocation.MyCommand.Path -Parent
         Import-Module $ScriptDir\Common.ps1
     }
