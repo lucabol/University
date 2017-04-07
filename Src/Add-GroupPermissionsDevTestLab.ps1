@@ -18,8 +18,7 @@ $credentialsKind = InferCredentials
 LogOutput "Credentials kind: $credentialsKind"
 
 if ($credentialsKind -eq "File"){
-        $ScriptDir = Split-Path -Path $MyInvocation.MyCommand.Path -Parent
-        Import-Module $ScriptDir\Common.ps1
+        . .\Common.ps1
     }
 
 $ErrorActionPreference = "Stop"
