@@ -20,6 +20,7 @@ try {
     else {
         $credentialsKind =  "File"
     }
+    Write-Verbose "Credentials: $credentialsKind"
 
     if ($credentialsKind -eq "File"){
         . "./Common.ps1"
@@ -45,7 +46,7 @@ try {
         Param ($credentialsKind, $ProfilePath, $vmName, $resourceId, $notVerbose, $HelperPath)
 
         if ($credentialsKind -eq "File"){
-            . "./Common.ps1"
+            . $HelperPath
         }
 
         if($notVerbose) {
@@ -53,8 +54,9 @@ try {
         }
 
         LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
-        Write-Host "Deleting VM $resourceId"
+        Write-Host "Attempted Deleting VM $resourceId"
         $null = Remove-AzureRmResource -ResourceId $resourceId -Force
+        Write-Host "Succeeded Deleting VM $resourceId"
     }
 
     $vmcount = $allVms.Length
@@ -73,7 +75,7 @@ try {
             }
             $currentVm = $allVms[$vmiter]
             $vmName = $currentVm.ResourceName
-            LogOutput "Starting job to delete VM $vmName"
+            LogOutput "Starting job to delete VM $vmName, with params  $credentialsKind,$profilePath, $vmName, $($currentVm.ResourceId), $notVerbose, $HelperPath"
 
             $jobs += Start-Job -Name $vmName -ScriptBlock $deleteVmBlock -ArgumentList $credentialsKind,$profilePath, $vmName, $currentVm.ResourceId, $notVerbose, $HelperPath
             $vmiter = $vmiter + 1
@@ -82,8 +84,8 @@ try {
         if($jobs.count -ne 0) {
             Wait-job -Job $jobs -Force | Write-Verbose
             LogOutput "Batch: $i completed"
-            foreach($job in $grjobs) {
-                Receive-Job $job | LogOutput
+            foreach($job in $jobs) {
+                Receive-Job $job -ErrorAction SilentlyContinue | LogOutput
             }
         } else {
             LogOutput "No VMs to delete."
