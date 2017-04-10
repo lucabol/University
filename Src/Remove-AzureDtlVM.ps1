@@ -13,7 +13,13 @@ param
 )
 
 try {
-    $credentialsKind = InferCredentials
+
+    if($PSPrivateMetadata.JobId) {
+        $credentialsKind = "Runbook"
+    }
+    else {
+        $credentialsKind =  "File"
+    }
 
     if ($credentialsKind -eq "File"){
         . "./Common.ps1"

@@ -37,9 +37,6 @@ param
     [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure Profile")]
     [string] $profilePath = "$env:APPDATA\AzProfile.txt",
 
-    [Parameter(Mandatory=$true, HelpMessage="Which credential type to use (either File or Runbook)")]
-    [string] $credentialsKind,
-
     [Parameter(Mandatory=$false, HelpMessage="Location for the Machines")]
     [string] $location = "westeurope",
 
@@ -140,6 +137,14 @@ function Replace-Tokens
 }
 
 try {
+
+    if($PSPrivateMetadata.JobId) {
+        $credentialsKind = "Runbook"
+    }
+    else {
+        $credentialsKind =  "File"
+    }
+
     if($BatchSize -gt 100) {
         throw "BatchSize must be less or equal to 100"
     }
