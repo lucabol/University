@@ -158,9 +158,9 @@ try {
     LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
 
     # Create deployment names
-    $startTime = (Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmss")
-    LogOutput "StartTime: $startTime"
-    $deploymentName = "Deployment_$LabName_$startTime"
+    $depTime = (Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmss")
+    LogOutput "StartTime: $depTime"
+    $deploymentName = "Deployment_$LabName_$depTime"
     $shutDeployment = $deploymentName + "Shutdown"
     LogOutput "Deployment Name: $deploymentName"
     LogOutput "Shutdown Deployment Name: $shutDeployment"
@@ -180,15 +180,21 @@ try {
         LogOutput "No existing VMs in $LabName"
     }
 
-    # Set the expiration Date
-    $UniversalDate = (Get-Date).ToUniversalTime()
-    $ExpirationDate = $UniversalDate.AddDays(1).ToString("yyyy-MM-dd")
-    LogOutput "Expiration Date: $ExpirationDate"
-
     # Set the shutdown time
     $startTime = Get-Date $ClassStart
-    $ShutDownTime = $startTime.AddMinutes($Duration).toString("HHmm")
+    $ShutDownDate = $startTime.AddMinutes($Duration)
+    $ShutDownTime = $ShutDownDate.toString("HHmm")
+    LogOutput "ShutdownDate: $ShutDownDate, ShutdownTime: $ShutDownTime"
+
     LogOutput "Class Start Time: $($startTime)    Class End Time: $($ShutDownTime)"
+
+    # Set the expiration Date
+    # $UniversalDate = (Get-Date).ToUniversalTime()
+    # $ExpirationDate = $UniversalDate.AddDays(1).ToString("yyyy-MM-dd")
+    # LogOutput "Expiration Date: $ExpirationDate"
+
+    $ExpirationDate = $ShutDownDate.ToString("yyyy-MM-ddTHH:mm:00")
+    LogOutput "Expiration Date: $ExpirationDate"
 
     LogOutput "Start deployment of Shutdown time ..."
     # Change Shutdown time in lab
