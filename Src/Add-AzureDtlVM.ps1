@@ -189,6 +189,9 @@ try {
     # Set the expiration date. This needs to be passed to the system in UTC time, so it is converted to UTC from TimeZoneId time
     $tz = [system.timezoneinfo]::FindSystemTimeZoneById($TimeZoneId)
     $ExpirationUtc = [system.timezoneinfo]::ConvertTimeToUtc($ShutDownDate, $tz)
+    if($ExpirationUtc -le [DateTime]::UtcNow) {
+        throw "Expiration date $ShutDownDate (or in UTC $ExpirationUtc) must be in the future."
+    }
     $ExpirationDate = $ExpirationUtc.ToString("yyyy-MM-ddTHH:mm:ss")
     LogOutput "Expiration Date: $ExpirationDate"
 
