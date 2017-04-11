@@ -22,7 +22,7 @@ param
     [Parameter(Mandatory=$false, HelpMessage="Prefix for new VMs")]
     [string] $VMNameBase = "vm",
 
-    [Parameter(Mandatory=$true, HelpMessage="Scheduled start time for class. In form of 'HH:mm'")]
+    [Parameter(Mandatory=$true, HelpMessage="Scheduled start time for class. In form of 'HH:mm' in TimeZoneID timezone")]
     [string] $ClassStart,
 
     [Parameter(Mandatory=$true, HelpMessage="Time to live for VMs (in minutes)")]
@@ -180,20 +180,16 @@ try {
         LogOutput "No existing VMs in $LabName"
     }
 
-    # Set the shutdown time
+    # Set the shutdown time. This is used to set the shutdown schedule, without conversion, which means it needs to be in TimeZoneId time
     $startTime = Get-Date $ClassStart
     $ShutDownDate = $startTime.AddMinutes($Duration)
     $ShutDownTime = $ShutDownDate.toString("HHmm")
-    LogOutput "ShutdownDate: $ShutDownDate, ShutdownTime: $ShutDownTime"
-
     LogOutput "Class Start Time: $($startTime)    Class End Time: $($ShutDownTime)"
 
-    # Set the expiration Date
-    # $UniversalDate = (Get-Date).ToUniversalTime()
-    # $ExpirationDate = $UniversalDate.AddDays(1).ToString("yyyy-MM-dd")
-    # LogOutput "Expiration Date: $ExpirationDate"
-
-    $ExpirationDate = $ShutDownDate.ToString("yyyy-MM-ddTHH:mm:00")
+    # Set the expiration date. This needs to be passed to the system in UTC time, so it is converted to UTC from TimeZoneId time
+    $tz = [system.timezoneinfo]::FindSystemTimeZoneById($TimeZoneId)
+    $ExpirationUtc = [system.timezoneinfo]::ConvertTimeToUtc($ShutDownDate, $tz)
+    $ExpirationDate = $ExpirationUtc.ToString("yyyy-MM-ddTHH:mm:ss")
     LogOutput "Expiration Date: $ExpirationDate"
 
     LogOutput "Start deployment of Shutdown time ..."
