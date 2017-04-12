@@ -25,7 +25,7 @@ param
     [Parameter(Mandatory=$true, HelpMessage="Shutdown time for the VMs in the lab. In form of 'HH:mm' in TimeZoneID timezone")]
     [string] $ShutDownTime,
 
-    [Parameter(Mandatory=$false, HelpMessage="Expiry DateTime in TimeZoneID timezone (defaults to the shutdown time)")]
+    [Parameter(Mandatory=$false, HelpMessage="Expiry DateTime (as YYYY-MM-DDTHH:mm:ss or other parsable datetime) in TimeZoneID timezone (defaults to the shutdown time)")]
     [DateTime] $ExpiryDateTime = (Get-Date $ShutDownTime),
 
     [Parameter(Mandatory=$false, HelpMessage="Virtual Network Name")]
