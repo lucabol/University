@@ -22,11 +22,11 @@ param
     [Parameter(Mandatory=$false, HelpMessage="Prefix for new VMs")]
     [string] $VMNameBase = "vm",
 
-    [Parameter(Mandatory=$true, HelpMessage="Scheduled start time for class. In form of 'HH:mm' in TimeZoneID timezone")]
-    [string] $ClassStart,
+    [Parameter(Mandatory=$true, HelpMessage="Shutdown time for the VMs in the lab. In form of 'HH:mm' in TimeZoneID timezone")]
+    [string] $ShutDownTime,
 
-    [Parameter(Mandatory=$true, HelpMessage="Time to live for VMs (in minutes)")]
-    [int] $Duration,
+    [Parameter(Mandatory=$false, HelpMessage="Expiry DateTime in TimeZoneID timezone (defaults to the shutdown time)")]
+    [DateTime] $ExpiryDateTime = (Get-Date $ShutDownTime),
 
     [Parameter(Mandatory=$false, HelpMessage="Virtual Network Name")]
     [string] $VNetName = "dtl$LabName",
@@ -164,6 +164,7 @@ try {
     $shutDeployment = $deploymentName + "Shutdown"
     LogOutput "Deployment Name: $deploymentName"
     LogOutput "Shutdown Deployment Name: $shutDeployment"
+    LogOutput "Shutdown time: $ShutDownTime"
 
     $SubscriptionID = (Get-AzureRmContext).Subscription.SubscriptionId
     LogOutput "Subscription id: $SubscriptionID"
@@ -180,15 +181,9 @@ try {
         LogOutput "No existing VMs in $LabName"
     }
 
-    # Set the shutdown time. This is used to set the shutdown schedule, without conversion, which means it needs to be in TimeZoneId time
-    $startTime = Get-Date $ClassStart
-    $ShutDownDate = $startTime.AddMinutes($Duration)
-    $ShutDownTime = $ShutDownDate.toString("HHmm")
-    LogOutput "Class Start Time: $($startTime)    Class End Time: $($ShutDownTime)"
-
-    # Set the expiration date. This needs to be passed to the system in UTC time, so it is converted to UTC from TimeZoneId time
+    # Set the expiration date. This needs to be passed to DevTestLab in UTC time, so it is converted to UTC from TimeZoneId time
     $tz = [system.timezoneinfo]::FindSystemTimeZoneById($TimeZoneId)
-    $ExpirationUtc = [system.timezoneinfo]::ConvertTimeToUtc($ShutDownDate, $tz)
+    $ExpirationUtc = [system.timezoneinfo]::ConvertTimeToUtc($ExpiryDateTime, $tz)
     if($ExpirationUtc -le [DateTime]::UtcNow) {
         throw "Expiration date $ShutDownDate (or in UTC $ExpirationUtc) must be in the future."
     }
