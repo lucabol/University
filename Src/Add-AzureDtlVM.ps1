@@ -26,7 +26,7 @@ param
     [string] $ShutDownTime,
 
     [Parameter(Mandatory=$false, HelpMessage="Expiry DateTime (as YYYY-MM-DDTHH:mm:ss or other parsable datetime) in TimeZoneID timezone (defaults to the shutdown time)")]
-    [DateTime] $ExpiryDateTime = (Get-Date $ShutDownTime),
+    [DateTime] $ExpiryDateTime = [DateTime]::UtcNow.Date.AddDays(1).AddHours(3).ToString("yyyy-MM-ddTHH:mm:ss"),
 
     [Parameter(Mandatory=$false, HelpMessage="Virtual Network Name")]
     [string] $VNetName = "dtl$LabName",
