@@ -58,7 +58,6 @@ foreach ($VM in $VirtualMachines)
     #get the VM status
 	#PowerState/deallocated = Stopped(deallocated)
 	#PowerState/stopped = Stopped (shutdown from the OS)
-
     $VMStatus = (Get-AzureRmVM -ResourceGroupName $labVmRGName -Name $VM.Name -Status).Statuses.Code[1]
     
             Write-Verbose ("Status VM  "+ $VM.Name + " :" + $VMStatus)
