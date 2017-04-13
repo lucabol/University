@@ -1,20 +1,29 @@
 [cmdletbinding()]
 param 
 (
+    [Parameter(Mandatory=$true, HelpMessage="Name of Lab")]
+    [string] $LabName,
+
+    [Parameter(Mandatory=$true, HelpMessage="Number of instances to create")]
+    [int] $VMCount,
+
+    [Parameter(Mandatory=$true, HelpMessage="Name of base image in lab")]
+    [string] $ImageName,
+
+    [Parameter(Mandatory=$true, HelpMessage="Shutdown time for the VMs in the lab. In form of 'HH:mm' in TimeZoneID timezone")]
+    [string] $ShutDownTime,
+
+    [Parameter(Mandatory=$false, HelpMessage="How many VMs to create in each batch")]
+    [int] $BatchSize = 50,
+
+    [Parameter(Mandatory=$false, HelpMessage="Expiry DateTime (as YYYY-MM-DDTHH:mm:ss or other parsable datetime) in TimeZoneID timezone (defaults to the shutdown time)")]
+    [DateTime] $ExpiryDateTime = [DateTime]::UtcNow.Date.AddDays(1).AddHours(3).ToString("yyyy-MM-ddTHH:mm:ss"),
+
     [Parameter(Mandatory=$false, HelpMessage="Path to the Deployment Template File")]
     [string] $TemplatePath = ".\dtl_multivm_customimage.json",
 
     [Parameter(Mandatory=$false, HelpMessage="Path to the Shutdown file")]
     [string] $ShutdownPath = ".\dtl_shutdown.json",
-
-    [Parameter(Mandatory=$true, HelpMessage="Number of instances to create")]
-    [int] $VMCount,
-
-    [Parameter(Mandatory=$true, HelpMessage="Name of Lab")]
-    [string] $LabName,
-
-    [Parameter(Mandatory=$true, HelpMessage="Name of base image in lab")]
-    [string] $ImageName,
 
     [Parameter(Mandatory=$false, HelpMessage="Size of VM image")]
     [string] $Size = "Standard_DS2",    
@@ -22,20 +31,11 @@ param
     [Parameter(Mandatory=$false, HelpMessage="Prefix for new VMs")]
     [string] $VMNameBase = "vm",
 
-    [Parameter(Mandatory=$true, HelpMessage="Shutdown time for the VMs in the lab. In form of 'HH:mm' in TimeZoneID timezone")]
-    [string] $ShutDownTime,
-
-    [Parameter(Mandatory=$false, HelpMessage="Expiry DateTime (as YYYY-MM-DDTHH:mm:ss or other parsable datetime) in TimeZoneID timezone (defaults to the shutdown time)")]
-    [DateTime] $ExpiryDateTime = [DateTime]::UtcNow.Date.AddDays(1).AddHours(3).ToString("yyyy-MM-ddTHH:mm:ss"),
-
     [Parameter(Mandatory=$false, HelpMessage="Virtual Network Name")]
     [string] $VNetName = "dtl$LabName",
 
     [Parameter(Mandatory=$false, HelpMessage="SubNetName")]
     [string] $SubnetName = "dtl" + $LabName + "SubNet",
-
-    [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure Profile")]
-    [string] $profilePath = "$env:APPDATA\AzProfile.txt",
 
     [Parameter(Mandatory=$false, HelpMessage="Location for the Machines")]
     [string] $location = "westeurope",
@@ -43,11 +43,11 @@ param
     [Parameter(Mandatory=$false, HelpMessage="TimeZone for machines")]
     [string] $TimeZoneId = "Central European Standard Time",
 
-    [Parameter(Mandatory=$false, HelpMessage="How many VMs to create in each batch")]
-    [int] $BatchSize = 50,
-
     [Parameter(Mandatory=$false, HelpMessage="Fail if existing VMs in the lab")]
-    [switch] $FailIfExisting
+    [switch] $FailIfExisting,
+
+    [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure Profile")]
+    [string] $profilePath = "$env:APPDATA\AzProfile.txt"
         
 )
 
