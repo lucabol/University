@@ -47,7 +47,7 @@ param
     [int] $BatchSize = 50,
 
     [Parameter(Mandatory=$false, HelpMessage="Fail if existing VMs in the lab")]
-    [switch] $FailIfExiting
+    [switch] $FailIfExisting
         
 )
 
@@ -101,6 +101,8 @@ function Create-VirtualMachines
         }
     elseif ($credentialsKind -eq "Runbook"){
 
+        $path = Get-AutomationVariable -Name 'TemplatePath'
+
         $file = Invoke-WebRequest -Uri $path -UseBasicParsing
         $content = $file.Content
     }
@@ -140,6 +142,10 @@ try {
 
     if($PSPrivateMetadata.JobId) {
         $credentialsKind = "Runbook"
+        $ShutdownPath = Get-AutomationVariable -Name 'ShutdownPath'
+        $VNetName = Get-AutomationVariable -Name 'VNetName'
+        $SubnetName = Get-AutomationVariable -Name 'SubnetName'
+        $Size = Get-AutomationVariable -Name 'Size'   
     }
     else {
         $credentialsKind =  "File"
