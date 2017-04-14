@@ -16,6 +16,7 @@ try {
 
     if($PSPrivateMetadata.JobId) {
         $credentialsKind = "Runbook"
+        $HelperPath = ""
     }
     else {
         $credentialsKind =  "File"
@@ -24,6 +25,8 @@ try {
 
     if ($credentialsKind -eq "File"){
         . "./Common.ps1"
+        $HelperPath = Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "Common.ps1"
+        LogOutput $HelperPath
     }
 
     LogOutput "Start Removal"
@@ -37,9 +40,6 @@ try {
     LogOutput "Resource Group: $ResourceGroupName"
 
     [array] $allVms = GetAllLabVMs -labname $LabName
-
-    $HelperPath = Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "Common.ps1"
-    LogOutput $HelperPath
 
     # Then delete all the vms in parallel
     $deleteVmBlock = {
