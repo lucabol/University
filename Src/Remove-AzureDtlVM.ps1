@@ -166,7 +166,7 @@ try {
             $batch = @()
         }
     }
-    LogOutput "Deleted $($allVms.Count) failed VMs"
+    LogOutput "Deleted $($allVms.Count) VMs"
     LogOutput "All Done"
 
 } finally {
