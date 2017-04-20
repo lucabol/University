@@ -81,6 +81,10 @@ function TestMany {
     $failedVms | % {write-host $_.ResourceName}
 
 }
-TestMany
+#TestMany
 #TestCommon
 #TestVMComputeId
+
+LoadAzureCredentials -credentialskind "File" -profilePath "$env:APPDATA\AzProfile.txt"
+$vms = GetAllLabVMsExpanded -LabName "Lab1"
+write-host $vms.Count

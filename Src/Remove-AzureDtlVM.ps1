@@ -8,89 +8,166 @@ param
     [string] $profilePath = "$env:APPDATA\AzProfile.txt",
 
     [Parameter(Mandatory=$false, HelpMessage="How many VMs to delete in parallel")]
-    [string] $parallelDeletion = 10
+    [string] $batchSize = 10
     
 )
+
+#### PS utility functions
+$ErrorActionPreference = "Stop"
+pushd $PSScriptRoot
+
+$global:VerbosePreference = $VerbosePreference
+$ProgressPreference = $VerbosePreference # Disable Progress Bar
+
+trap
+{
+    # NOTE: This trap will handle all errors. There should be no need to use a catch below in this
+    #       script, unless you want to ignore a specific error.
+    Handle-LastError
+}
+
+function Handle-LastError
+{
+    [CmdletBinding()]
+    param(
+    )
+
+    $posMessage = $_.ToString() + "`n" + $_.InvocationInfo.PositionMessage
+    Write-Host -Object "`nERROR: $posMessage" -ForegroundColor Red
+    LogOutput "All done!"
+    # IMPORTANT NOTE: Throwing a terminating error (using $ErrorActionPreference = "Stop") still
+    # returns exit code zero from the PowerShell script when using -File. The workaround is to
+    # NOT use -File when calling this script and leverage the try-catch-finally block and return
+    # a non-zero exit code from the catch block.
+    exit -1
+}
+
+function LogOutput {         
+    [CmdletBinding()]
+    param($msg)
+    $timestamp = (Get-Date).ToUniversalTime()
+    $output = "$timestamp [INFO]:: $msg"    
+    Write-Verbose $output
+}
+
+### Azure utility functions
+
+function LoadAzureCredentials {
+    [CmdletBinding()]
+    param($credentialsKind, $profilePath)
+
+    Write-Verbose "Credentials Kind: $credentialsKind"
+    Write-Verbose "Credentials File: $profilePath"
+
+    if(($credentialsKind -ne "File") -and ($credentialsKind -ne "RunBook")) {
+        throw "CredentialsKind must be either 'File' or 'RunBook'. It was $credentialsKind instead"
+    }
+
+    if($credentialsKind -eq "File") {
+        if (! (Test-Path $profilePath)) {
+            throw "Profile file(s) not found at $profilePath. Exiting script..."    
+        }
+        Select-AzureRmProfile -Path $profilePath | Out-Null
+    } else {
+        $connectionName = "AzureRunAsConnection"
+        $SubId = Get-AutomationVariable -Name 'SubscriptionId'
+
+        $servicePrincipalConnection = Get-AutomationConnection -Name $connectionName         
+
+        Add-AzureRmAccount `
+            -ServicePrincipal `
+            -TenantId $servicePrincipalConnection.TenantId `
+            -ApplicationId $servicePrincipalConnection.ApplicationId `
+            -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint
+        
+        Set-AzureRmContext -SubscriptionId $SubId                      
+    } 
+}
+
+### DTL utility functions
+
+function GetLab {
+    [CmdletBinding()]
+    param($LabName)
+    $lab = Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs" -ResourceNameContains $LabName  | where ResourceName -EQ "$LabName"
+    LogOutput "Lab: $lab"
+    return $lab
+}
+
+function GetAllLabVMs {
+    [CmdletBinding()]
+    param($LabName)
+    
+    return Find-AzureRmResource -ResourceType 'Microsoft.DevTestLab/labs/virtualmachines' -ResourceNameContains "$LabName/" | ? { $_.ResourceName -like "$LabName/*" }
+} 
+
+function GetResourceGroupName {
+    [CmdletBinding()]
+    param($LabName)
+    return (GetLab -labname $LabName).ResourceGroupName    
+}
+
+workflow Remove-AzureDtlLabVMs
+{
+    [CmdletBinding()]
+    param(
+        $Ids,
+        $credentialsKind,
+        $profilePath
+    )
+
+    foreach -parallel ($id in $Ids)
+    {
+        try
+        {
+            LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
+            $name = $id.Split('/')[-1]
+            Write-Verbose "Removing virtual machine '$name' ..."
+            $null = Remove-AzureRmResource -Force -ResourceId "$id"
+            Write-Verbose "Done Removing"
+        }
+        catch
+        {
+            $posMessage = $_.ToString() + "`n" + $_.InvocationInfo.PositionMessage
+            Write-Output "`nWORKFLOW ERROR: $posMessage"
+        }
+    }
+}
+
+#### Main script
 
 try {
 
     if($PSPrivateMetadata.JobId) {
         $credentialsKind = "Runbook"
-        $HelperPath = ""
     }
     else {
         $credentialsKind =  "File"
     }
     Write-Verbose "Credentials: $credentialsKind"
 
-    if ($credentialsKind -eq "File"){
-        . "./Common.ps1"
-        $HelperPath = Join-Path (Split-Path ($Script:MyInvocation.MyCommand.Path)) "Common.ps1"
-        LogOutput $HelperPath
-    }
-
     LogOutput "Start Removal"
 
     LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
-
-    # Used to disable progress bar when removing resource
-    $notVerbose = $VerbosePreference -eq "SilentlyContinue"
 
     $ResourceGroupName = GetResourceGroupName -labname $LabName
     LogOutput "Resource Group: $ResourceGroupName"
 
     [array] $allVms = GetAllLabVMs -labname $LabName
 
-    # Then delete all the vms in parallel
-    $deleteVmBlock = {
-        Param ($credentialsKind, $ProfilePath, $vmName, $resourceId, $notVerbose, $HelperPath)
+    $batch = @(); $i = 0;
 
-        if ($credentialsKind -eq "File"){
-            . $HelperPath
-        }
-
-        if($notVerbose) {
-            $ProgressPreference = "SilentlyContinue" # disable progress bar if not verbose
-        }
-
-        LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
-        Write-Host "Attempted Deleting VM $resourceId"
-        $null = Remove-AzureRmResource -ResourceId $resourceId -Force
-        Write-Host "Succeeded Deleting VM $resourceId"
-    }
-
-    $vmcount = $allVms.Length
-    $loops = [math]::Floor($vmcount / $parallelDeletion)
-    $rem = $vmcount - $loops * $parallelDeletion
-    LogOutput "VMCount: $vmcount, Loops: $loops, Rem: $rem"
-    LogOutput "Vms: $allVms"
-
-    $vmiter = 0
-    for($i = 0; $i -lt $loops + 1; $i++) {
-
-        $jobs = @()
-        for($j = 0; $j -lt $parallelDeletion; $j++) {
-            if($vmiter -ge $vmCount) {
-                break
-            }
-            $currentVm = $allVms[$vmiter]
-            $vmName = $currentVm.ResourceName
-            LogOutput "Starting job to delete VM $vmName, with params  $credentialsKind,$profilePath, $vmName, $($currentVm.ResourceId), $notVerbose, $HelperPath"
-
-            $jobs += Start-Job -Name $vmName -ScriptBlock $deleteVmBlock -ArgumentList $credentialsKind,$profilePath, $vmName, $currentVm.ResourceId, $notVerbose, $HelperPath
-            $vmiter = $vmiter + 1
-        }
-
-        if($jobs.count -ne 0) {
-            Wait-job -Job $jobs -Force | Write-Verbose
-            LogOutput "Batch: $i completed"
-            foreach($job in $jobs) {
-                Receive-Job $job -ErrorAction SilentlyContinue | LogOutput
-            }
-        } else {
-            LogOutput "No VMs to delete."
+    $allVms | % {
+        $batch += $_.ResourceId
+        $i++
+        if ($batch.Count -eq $BatchSize -or $allVms.Count -eq $i)
+        {
+            Remove-AzureDtlLabVMs -Ids $batch -ProfilePath $profilePath -credentialsKind $credentialsKind
+            $batch = @()
         }
     }
+    LogOutput "Deleted $($allVms.Count) failed VMs"
+    LogOutput "All Done"
 
 } finally {
     if($credentialsKind -eq "File") {

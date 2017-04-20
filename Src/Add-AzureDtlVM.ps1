@@ -51,6 +51,101 @@ param
         
 )
 
+#### PS utility functions
+$ErrorActionPreference = "Stop"
+pushd $PSScriptRoot
+
+$global:VerbosePreference = $VerbosePreference
+$ProgressPreference = $VerbosePreference # Disable Progress Bar
+
+trap
+{
+    # NOTE: This trap will handle all errors. There should be no need to use a catch below in this
+    #       script, unless you want to ignore a specific error.
+    Handle-LastError
+}
+
+function Handle-LastError
+{
+    [CmdletBinding()]
+    param(
+    )
+
+    $posMessage = $_.ToString() + "`n" + $_.InvocationInfo.PositionMessage
+    Write-Host -Object "`nERROR: $posMessage" -ForegroundColor Red
+    LogOutput "All done!"
+    # IMPORTANT NOTE: Throwing a terminating error (using $ErrorActionPreference = "Stop") still
+    # returns exit code zero from the PowerShell script when using -File. The workaround is to
+    # NOT use -File when calling this script and leverage the try-catch-finally block and return
+    # a non-zero exit code from the catch block.
+    exit -1
+}
+
+function LogOutput {         
+    [CmdletBinding()]
+    param($msg)
+    $timestamp = (Get-Date).ToUniversalTime()
+    $output = "$timestamp [INFO]:: $msg"    
+    Write-Verbose $output
+}
+
+### Azure utility functions
+
+function LoadAzureCredentials {
+    [CmdletBinding()]
+    param($credentialsKind, $profilePath)
+
+    Write-Verbose "Credentials Kind: $credentialsKind"
+    Write-Verbose "Credentials File: $profilePath"
+
+    if(($credentialsKind -ne "File") -and ($credentialsKind -ne "RunBook")) {
+        throw "CredentialsKind must be either 'File' or 'RunBook'. It was $credentialsKind instead"
+    }
+
+    if($credentialsKind -eq "File") {
+        if (! (Test-Path $profilePath)) {
+            throw "Profile file(s) not found at $profilePath. Exiting script..."    
+        }
+        Select-AzureRmProfile -Path $profilePath | Out-Null
+    } else {
+        $connectionName = "AzureRunAsConnection"
+        $SubId = Get-AutomationVariable -Name 'SubscriptionId'
+
+        $servicePrincipalConnection = Get-AutomationConnection -Name $connectionName         
+
+        Add-AzureRmAccount `
+            -ServicePrincipal `
+            -TenantId $servicePrincipalConnection.TenantId `
+            -ApplicationId $servicePrincipalConnection.ApplicationId `
+            -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint
+        
+        Set-AzureRmContext -SubscriptionId $SubId                      
+    } 
+}
+
+### DTL utility functions
+
+function GetLab {
+    [CmdletBinding()]
+    param($LabName)
+    $lab = Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs" -ResourceNameContains $LabName  | where ResourceName -EQ "$LabName"
+    LogOutput "Lab: $lab"
+    return $lab
+}
+
+function GetAllLabVMsExpanded {
+    [CmdletBinding()]
+    param($LabName)
+
+    return Find-AzureRmResource -ResourceType 'Microsoft.DevTestLab/labs/virtualmachines' -ResourceNameContains "$LabName/" -ExpandProperties | ? { $_.ResourceName -like "$LabName/*" }    
+}
+
+function GetResourceGroupName {
+    [CmdletBinding()]
+    param($LabName)
+    return (GetLab -labname $LabName).ResourceGroupName    
+}
+
 function ConvertTo-Hashtable
 {
     param(
@@ -138,6 +233,35 @@ function Replace-Tokens
     return $Content
 }
 
+workflow Remove-AzureDtlLabVMs
+{
+    [CmdletBinding()]
+    param(
+        $Ids,
+        $credentialsKind,
+        $profilePath
+    )
+
+    foreach -parallel ($id in $Ids)
+    {
+        try
+        {
+            LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
+            $name = $id.Split('/')[-1]
+            Write-Output "Removing virtual machine '$name' ..."
+            $null = Remove-AzureRmResource -Force -ResourceId "$id"
+            Write-Output "Done Removing"
+        }
+        catch
+        {
+            $posMessage = $_.ToString() + "`n" + $_.InvocationInfo.PositionMessage
+            Write-Output "`nWORKFLOW ERROR: $posMessage"
+        }
+    }
+}
+
+#### Main script
+
 try {
 
     if($PSPrivateMetadata.JobId) {
@@ -153,10 +277,6 @@ try {
 
     if($BatchSize -gt 100) {
         throw "BatchSize must be less or equal to 100"
-    }
-
-    if ($credentialsKind -eq "File"){
-        . "./Common.ps1"
     }
     
     LogOutput "Start provisioning ..."
@@ -197,7 +317,6 @@ try {
     LogOutput "Expiration Date: $ExpirationDate"
 
     LogOutput "Start deployment of Shutdown time ..."
-    # Change Shutdown time in lab
     $shutParams = @{
             newLabName = $LabName
             shutDownTime = $ShutDownTime
@@ -239,6 +358,8 @@ try {
     $rem = $VMCount - $loops * $BatchSize
     LogOutput "VMCount: $vmcount, Loops: $loops, Rem: $rem"
 
+    $creationError = $false
+
     # Iterating loops time
     for($i = 0; $i -lt $loops; $i++) {
         try {
@@ -247,6 +368,7 @@ try {
             Create-VirtualMachines -LabId $labId -Tokens $tokens -path $TemplatePath
             LogOutput "Finished processing batch: $i"
         } catch {
+            $creationError = $true
             $posMessage = $_.ToString() + "`n" + $_.InvocationInfo.PositionMessage
             Write-Host -Object "`nERROR: $posMessage" -ForegroundColor Red
             Write-Host "Moving on to next batch after error"            
@@ -255,17 +377,49 @@ try {
 
     # Process reminder
     if($rem -ne 0) {
-        LogOutput "Processing reminder"
-        $tokens["Name"] = $VMNameBase + "Rm"
-        $tokens["Count"] = $rem
-        Create-VirtualMachines -LabId $labId -Tokens $tokens -path $TemplatePath
-        LogOutput "Finished processing reminder"
+        try {
+            LogOutput "Processing reminder"
+            $tokens["Name"] = $VMNameBase + "Rm"
+            $tokens["Count"] = $rem
+            Create-VirtualMachines -LabId $labId -Tokens $tokens -path $TemplatePath
+            LogOutput "Finished processing reminder"
+         } catch {
+            $creationError = $true
+            $posMessage = $_.ToString() + "`n" + $_.InvocationInfo.PositionMessage
+            Write-Host -Object "`nERROR: $posMessage" -ForegroundColor Red
+            Write-Host "Moving on to next batch after error"            
+        }           
     }
+
+    # Check if there are Failed VMs in the lab and deletes them, using the same batchsize as creation.
+    # It is done even if the failed VMs haven't been created by this script, just for the sake of cleaning up the lab.
+    [array] $vms = GetAllLabVMsExpanded -LabName $LabName
+    [array] $failed = $vms | ? { $_.Properties.provisioningState -eq 'Failed' }
+    LogOutput "Detected $($failed.Count) failed VMs"
+
+    $batch = @(); $i = 0;
+
+    $failed | % {
+        $batch += $_.ResourceId
+        $i++
+        if ($batch.Count -eq $BatchSize -or $failed.Count -eq $i)
+        {
+            Remove-AzureDtlLabVMs -Ids $batch -ProfilePath $profilePath -credentialsKind $credentialsKind
+            $batch = @()
+        }
+    }
+    LogOutput "Deleted $($failed.Count) failed VMs"
+
+    # An error is thrown if any batch creation in this script failed *NOT* if we found existing failed VMs in the lab.
+    if($creationError) {
+        throw "Deleted $($failed.Count) failed VMs"         
+    }
+
     LogOutput "All done!"
 
 } finally {
     if($credentialsKind -eq "File") {
-        1..3 | % { [console]::beep(2500,300) } # Make a sound to indicate we're done.
+        1..3 | % { [console]::beep(2500,300) } # Make a sound to indicate we're done if running from command line.
     }
     popd
 }

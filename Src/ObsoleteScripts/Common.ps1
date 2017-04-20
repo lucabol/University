@@ -22,7 +22,7 @@ function Handle-LastError
     #$posMessage = $_.InvocationInfo.PositionMessage
     $posMessage = $_.ToString() + "`n" + $_.InvocationInfo.PositionMessage
     Write-Host -Object "`nERROR: $posMessage" -ForegroundColor Red
-    
+    LogOutput "All done!"
     # IMPORTANT NOTE: Throwing a terminating error (using $ErrorActionPreference = "Stop") still
     # returns exit code zero from the PowerShell script when using -File. The workaround is to
     # NOT use -File when calling this script and leverage the try-catch-finally block and return
@@ -116,12 +116,11 @@ function GetAllLabVMs {
     return Find-AzureRmResource -ResourceType 'Microsoft.DevTestLab/labs/virtualmachines' -ResourceNameContains "$LabName/" | ? { $_.ResourceName -like "$LabName/*" }
 } 
 
-# Hideously slow. Is there a way to retrieve it bulk? btw: just adding OData query to Find-AzureRmResource doesn't work
-function GetAllLabVMsWithCompute {
+function GetAllLabVMsExpanded {
     [CmdletBinding()]
     param($LabName)
-    $vms = GetAllLabVms -LabName $LabName
-    return $vms | % { Get-AzureRmResource -ResourceId $_.ResourceId -ODataQuery '$expand=Properties($expand=ComputeVm)' | ? { $_.ResourceName -like "$LabName/*" } }
+
+    return Find-AzureRmResource -ResourceType 'Microsoft.DevTestLab/labs/virtualmachines' -ResourceNameContains "$LabName/" -ExpandProperties | ? { $_.ResourceName -like "$LabName/*" }    
 } 
 
 function GetDTLComputeProperties {
