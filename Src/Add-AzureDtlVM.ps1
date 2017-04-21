@@ -393,6 +393,7 @@ try {
 
     # Check if there are Failed VMs in the lab and deletes them, using the same batchsize as creation.
     # It is done even if the failed VMs haven't been created by this script, just for the sake of cleaning up the lab.
+    LogOutput "Check for failed VMs"
     [array] $vms = GetAllLabVMsExpanded -LabName $LabName
     [array] $failed = $vms | ? { $_.Properties.provisioningState -eq 'Failed' }
     LogOutput "Detected $($failed.Count) failed VMs"
