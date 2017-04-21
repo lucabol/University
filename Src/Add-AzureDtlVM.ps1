@@ -16,9 +16,6 @@ param
     [Parameter(Mandatory=$false, HelpMessage="How many VMs to create in each batch")]
     [int] $BatchSize = 50,
 
-    [Parameter(Mandatory=$false, HelpMessage="Expiry DateTime (as YYYY-MM-DDTHH:mm:ss or other parsable datetime) in TimeZoneID timezone (defaults to the shutdown time)")]
-    [DateTime] $ExpiryDateTime = [DateTime]::UtcNow.Date.AddDays(1).AddHours(3).ToString("yyyy-MM-ddTHH:mm:ss"),
-
     [Parameter(Mandatory=$false, HelpMessage="Path to the Deployment Template File")]
     [string] $TemplatePath = ".\dtl_multivm_customimage.json",
 
@@ -47,8 +44,10 @@ param
     [switch] $FailIfExisting,
 
     [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure Profile")]
-    [string] $profilePath = "$env:APPDATA\AzProfile.txt"
-        
+    [string] $profilePath = "$env:APPDATA\AzProfile.txt",
+
+    [Parameter(Mandatory=$false, HelpMessage="Expiry DateTime (as YYYY-MM-DDTHH:mm:ss or other parsable datetime) in TimeZoneID timezone (defaults to the shutdown time)")]
+    [DateTime] $ExpiryDateTime = ([timezoneinfo]::ConvertTimeFromUtc([datetime]::UtcNow, [timezoneinfo]::FindSystemTimeZoneById($TimeZoneId))).Date.AddDays(1).AddHours(3)       
 )
 
 #### PS utility functions
