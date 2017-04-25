@@ -118,12 +118,7 @@ function LoadAzureCredentials {
             -ApplicationId $servicePrincipalConnection.ApplicationId `
             -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint
         
-        Set-AzureRmContext -SubscriptionId $servicePrincipalConnection.SubscriptionID
-
-        # Save profile so it can be used later and set credentialsKind to "File"
-        $global:profilePath = (Join-Path $env:TEMP  (New-guid).Guid)
-        Save-AzureRmProfile -Path $global:profilePath -Force | Write-Verbose
-        $global:credentialsKind =  "File"                             
+        Set-AzureRmContext -SubscriptionId $SubId                            
     } 
 }
 
