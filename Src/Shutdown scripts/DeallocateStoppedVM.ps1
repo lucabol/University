@@ -40,17 +40,28 @@ $ResourceGroupName = (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/l
 #get the lab VMs
 $labVM=Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs/virtualMachines" -ResourceGroupName $ResourceGroupName
 
-#pick the first one and get its id
-$labVmId=$labVM[0].ResourceId
 
-#get the specific compute id from the labVmId
-$labVmComputeId=(Get-AzureRmResource -Id $labVmId).Properties.computeId
+#get the resourceID of each labVM
+$labVmId = @()
+foreach ($machine in $labVM){
+    $labVmId += $machine.ResourceId
+}
 
-#get the actual RG of the compute VM
-$labVmRGName=(Get-AzureRmResource -Id $labVmComputeID).resourcegroupname
 
-#Get all the compute VMs of the lab
-$VirtualMachines = Get-AzureRmVM -ResourceGroupName $labVmRGName
+$VirtualMachines = @()
+foreach ($id in $labVmId){
+    #get the specific compute id from the labVmId
+    $computeId = (Get-AzureRmResource -Id $id).Properties.computeId
+
+    #get the actual RG of the compute VM
+    $labVmRGName=(Get-AzureRmResource -Id $computeId).resourcegroupname
+
+    #Get all the compute VMs of the specific compute RG. Avoid recalling for the same RG
+    if ($VirtualMachines.ResourceGroupName -notcontains $labVmRGName){
+        $VirtualMachines += Get-AzureRmVM -ResourceGroupName $labVmRGName
+    }
+}
+
 
 
 foreach ($VM in $VirtualMachines)
