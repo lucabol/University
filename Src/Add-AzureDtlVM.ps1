@@ -11,7 +11,7 @@ param
     [string] $ImageName,
 
     [Parameter(Mandatory=$true, HelpMessage="Shutdown time for the VMs in the lab. In form of 'HH:mm' in TimeZoneID timezone")]
-    [string] $ShutDownTime,
+    [DateTime] $ShutDownTime,
 
     [Parameter(Mandatory=$false, HelpMessage="How many VMs to create in each batch")]
     [int] $BatchSize = 50,
@@ -315,10 +315,13 @@ try {
     $ExpirationDate = $ExpirationUtc.ToString("yyyy-MM-ddTHH:mm:ss")
     LogOutput "Expiration Date: $ExpirationDate"
 
+    $ShutDownTimeHours = $ShutDownTime.ToString("HHmm")
+    LogOutput "Shutdown Time hours: $ShutdownTimeHours"
+
     LogOutput "Start deployment of Shutdown time ..."
     $shutParams = @{
             newLabName = $LabName
-            shutDownTime = $ShutDownTime
+            shutDownTime = $ShutDownTimeHours
             timeZoneId = $TimeZoneId
         }
     
@@ -345,7 +348,7 @@ try {
         Location = $location
         Name = $VMNameBase
         ResourceGroupName = $ResourceGroupName
-        ShutDownTime = $ShutDownTime
+        ShutDownTime = $ShutDownTimeHours
         Size = $Size
         SubnetName = $SubnetName
         SubscriptionId = $SubscriptionId
