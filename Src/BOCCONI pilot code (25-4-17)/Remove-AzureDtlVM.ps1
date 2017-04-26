@@ -26,14 +26,20 @@ trap
     Handle-LastError
 }
 
+function Report-Error {
+    [CmdletBinding()]
+    param($error)
+
+    $posMessage = $error.ToString() + "`n" + $error.InvocationInfo.PositionMessage
+    Write-Error "`nERROR: $posMessage" -ErrorAction "Continue"
+}
+
 function Handle-LastError
 {
     [CmdletBinding()]
-    param(
-    )
+    param()
 
-    $posMessage = $_.ToString() + "`n" + $_.InvocationInfo.PositionMessage
-    Write-Host -Object "`nERROR: $posMessage" -ForegroundColor Red
+    Report-Error -error $_
     LogOutput "All done!"
     # IMPORTANT NOTE: Throwing a terminating error (using $ErrorActionPreference = "Stop") still
     # returns exit code zero from the PowerShell script when using -File. The workaround is to
@@ -80,7 +86,12 @@ function LoadAzureCredentials {
             -ApplicationId $servicePrincipalConnection.ApplicationId `
             -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint
         
-        Set-AzureRmContext -SubscriptionId $SubId                      
+        Set-AzureRmContext -SubscriptionId $servicePrincipalConnection.SubscriptionID 
+
+        # Save profile so it can be used later and set credentialsKind to "File"
+        $global:profilePath = (Join-Path $env:TEMP  (New-guid).Guid)
+        Save-AzureRmProfile -Path $global:profilePath | Write-Verbose
+        $global:credentialsKind =  "File"                         
     } 
 }
 
@@ -128,8 +139,7 @@ workflow Remove-AzureDtlLabVMs
         }
         catch
         {
-            $posMessage = $_.ToString() + "`n" + $_.InvocationInfo.PositionMessage
-            Write-Output "`nWORKFLOW ERROR: $posMessage"
+            Report-Error $_
         }
     }
 }
@@ -137,6 +147,7 @@ workflow Remove-AzureDtlLabVMs
 #### Main script
 
 try {
+    LogOutput "Start Removal"
 
     if($PSPrivateMetadata.JobId) {
         $credentialsKind = "Runbook"
@@ -144,10 +155,8 @@ try {
     else {
         $credentialsKind =  "File"
     }
-    Write-Verbose "Credentials: $credentialsKind"
 
-    LogOutput "Start Removal"
-
+    LogOutput "Credentials: $credentialsKind"
     LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
 
     $ResourceGroupName = GetResourceGroupName -labname $LabName
