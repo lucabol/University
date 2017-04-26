@@ -49,14 +49,20 @@ trap
     Handle-LastError
 }
 
+function Report-Error {
+    [CmdletBinding()]
+    param($error)
+
+    $posMessage = $error.ToString() + "`n" + $error.InvocationInfo.PositionMessage
+    Write-Error "`nERROR: $posMessage" -ErrorAction "Continue"
+}
+
 function Handle-LastError
 {
     [CmdletBinding()]
-    param(
-    )
+    param()
 
-    $posMessage = $_.ToString() + "`n" + $_.InvocationInfo.PositionMessage
-    Write-Host -Object "`nERROR: $posMessage" -ForegroundColor Red
+    Report-Error -error $_
     LogOutput "All done!"
     # IMPORTANT NOTE: Throwing a terminating error (using $ErrorActionPreference = "Stop") still
     # returns exit code zero from the PowerShell script when using -File. The workaround is to
@@ -103,7 +109,12 @@ function LoadAzureCredentials {
             -ApplicationId $servicePrincipalConnection.ApplicationId `
             -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint
         
-        Set-AzureRmContext -SubscriptionId $SubId                      
+        Set-AzureRmContext -SubscriptionId $servicePrincipalConnection.SubscriptionID 
+
+        # Save profile so it can be used later and set credentialsKind to "File"
+        $global:profilePath = (Join-Path $env:TEMP  (New-guid).Guid)
+        Save-AzureRmProfile -Path $global:profilePath | Write-Verbose
+        $global:credentialsKind =  "File"                         
     } 
 }
 
@@ -178,24 +189,10 @@ function Create-VirtualMachines
 {
     [CmdletBinding()]
     Param(
-        [string] $path,
+        [string] $content,
         [string] $LabId,
         [hashtable] $Tokens
     )
-
-    if ($credentialsKind -eq "File"){
-        $path = Resolve-Path $path
-
-        $content = [IO.File]::ReadAllText($path)
-
-        }
-    elseif ($credentialsKind -eq "Runbook"){
-
-        $path = Get-AutomationVariable -Name 'TemplatePath'
-
-        $file = Invoke-WebRequest -Uri $path -UseBasicParsing
-        $content = $file.Content
-    }
 
     $json = Create-ParamsJson -Content $content -Tokens $tokens
     LogOutput $json
@@ -204,6 +201,7 @@ function Create-VirtualMachines
 
     Invoke-AzureRmResourceAction -ResourceId "$LabId" -Action CreateEnvironment -Parameters $parameters -Force  | Out-Null
 }
+
 
 function Extract-Tokens
 {
@@ -243,15 +241,13 @@ workflow Remove-AzureDtlLabVMs
         {
             LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
             $name = $id.Split('/')[-1]
-            Write-Output "Removing virtual machine '$name' ..."
+            LogOutput "Removing virtual machine '$name' ..."
             $null = Remove-AzureRmResource -Force -ResourceId "$id"
-            Write-Output "Done Removing"
+            LogOutput "Done Removing"
         }
         catch
         {
-            $posMessage = $_.ToString() + "`n" + $_.InvocationInfo.PositionMessage
-            $errors += ,$posMessage
-            Write-Output "`nWORKFLOW ERROR: $posMessage"
+            Report-Error $f_
         }
     }
 }
@@ -264,12 +260,13 @@ try {
 
     if($PSPrivateMetadata.JobId) {
         $credentialsKind = "Runbook"
-        $VNetName = Get-AutomationVariable -Name 'VNetName'
-        $SubnetName = Get-AutomationVariable -Name 'SubnetName'
-        $Size = Get-AutomationVariable -Name 'Size'   
+        $file = Invoke-WebRequest -Uri $TemplatePath -UseBasicParsing
+        $templateContent = $file.Content
     }
     else {
         $credentialsKind =  "File"
+        $path = Resolve-Path $TemplatePath
+        $templateContent = [IO.File]::ReadAllText($path)
     }
 
     if($BatchSize -gt 100) {
@@ -353,10 +350,8 @@ try {
                 Create-VirtualMachines -LabId $labId -Tokens $tokens -path $TemplatePath
                 LogOutput "Finished processing batch: $i"
             } catch {
-                $posMessage = $_.ToString() + "`n" + $_.InvocationInfo.PositionMessage
-                $errors += ,$posMessage
-                Write-Host -Object "`nERROR: $posMessage" -ForegroundColor Red
-                Write-Host "Moving on to next batch after error"            
+                Report-Error $_
+                LogOutput "Moving on to next batch after error"            
             }
         }
 
@@ -369,10 +364,8 @@ try {
                 Create-VirtualMachines -LabId $labId -Tokens $tokens -path $TemplatePath
                 LogOutput "Finished processing reminder"
             } catch {
-                $posMessage = $_.ToString() + "`n" + $_.InvocationInfo.PositionMessage
-                $errors += ,$posMessage
-                Write-Host -Object "`nERROR: $posMessage" -ForegroundColor Red
-                Write-Host "Moving on to next batch after error"            
+                Report-Error $_
+                LogOutput "Moving on to next batch after error"            
             }           
         }
     }
