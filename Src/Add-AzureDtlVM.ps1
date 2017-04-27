@@ -14,7 +14,7 @@ param
     [string] $ShutDownTime,
 
     [Parameter(Mandatory=$false, HelpMessage="How many VMs to create in each batch")]
-    [int] $BatchSize = 50,
+    [int] $BatchSize = 30,
 
     [Parameter(Mandatory=$false, HelpMessage="Path to the Deployment Template File")]
     [string] $TemplatePath = ".\dtl_multivm_customimage.json",
@@ -23,7 +23,7 @@ param
     [string] $ShutdownPath = ".\dtl_shutdown.json",
 
     [Parameter(Mandatory=$false, HelpMessage="Size of VM image")]
-    [string] $Size = "Standard_DS2",    
+    [string] $Size = "Standard_A2_v2",    
 
     [Parameter(Mandatory=$false, HelpMessage="Prefix for new VMs")]
     [string] $VMNameBase = "vm",
