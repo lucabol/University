@@ -81,4 +81,4 @@ $ResourceGroupName = (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/l
 $objectId = Get-AzureRmADGroup -SearchString $ADGroupName
 
 # assign the role to the group for the specified lab
-New-AzureRmRoleAssignment -ObjectId $objectId.Id -Scope /subscriptions/$SubscriptionID/resourcegroups/$ResourceGroupName/providers/microsoft.devtestlab/labs/$labName -RoleDefinitionName $role
+Remove-AzureRmRoleAssignment -ObjectId $objectId.Id -Scope /subscriptions/$SubscriptionID/resourcegroups/$ResourceGroupName/providers/microsoft.devtestlab/labs/$labName -RoleDefinitionName $role
