@@ -88,7 +88,7 @@ function LoadAzureCredentials {
             -ApplicationId $servicePrincipalConnection.ApplicationId `
             -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint
         
-        Set-AzureRmContext -SubscriptionId $servicePrincipalConnection.SubscriptionID 
+        Set-AzureRmContext -SubscriptionId $servicePrincipalConnection.SubscriptionID | Write-Verbose
 
         # Save profile so it can be used later and set credentialsKind to "File"
         $global:profilePath = (Join-Path $env:TEMP  (New-guid).Guid)
@@ -127,7 +127,7 @@ try {
     $vmCount = $vms.Count
     $failedCount = $failedVms.Count
     $availableVMs = $vmCount - $failedCount
-    LogOutput "Total Number of VMs: $vmCount, Failed VMs: $failedCount, Available VMs: $availableVMs"
+    Write-Output "Total Number of VMs: $vmCount, Failed VMs: $failedCount, Available VMs: $availableVMs"
 
     $wrongCount = ($availableVMs -lt $LabSize * (1 - $VMDelta)) -or ($availableVMs -gt $LabSize * (1 + $VMDelta))
     $someFailed = $failedCount -ne 0
@@ -135,7 +135,7 @@ try {
     if($someFailed -or $wrongCount) {
         Write-Error "VMs count: $availableVMs / $LabSize, Failed VMs: $FailedCount"
     } else {
-        LogOutput "The lab is as expected"
+        Write-Output "The lab is as expected"
     }
 
 } finally {
