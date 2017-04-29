@@ -90,10 +90,9 @@ function LoadAzureCredentials {
         
         Set-AzureRmContext -SubscriptionId $servicePrincipalConnection.SubscriptionID | Write-Verbose
 
-        # Save profile so it can be used later and set credentialsKind to "File"
+        # Save profile so it can be used later
         $global:profilePath = (Join-Path $env:TEMP  (New-guid).Guid)
         Save-AzureRmProfile -Path $global:profilePath | Write-Verbose
-        $global:credentialsKind =  "File"                         
     } 
 }
 

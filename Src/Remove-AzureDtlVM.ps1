@@ -88,10 +88,9 @@ function LoadAzureCredentials {
         
         Set-AzureRmContext -SubscriptionId $servicePrincipalConnection.SubscriptionID 
 
-        # Save profile so it can be used later and set credentialsKind to "File"
+        # Save profile so it can be used later
         $global:profilePath = (Join-Path $env:TEMP  (New-guid).Guid)
-        Save-AzureRmProfile -Path $global:profilePath | Write-Verbose
-        $global:credentialsKind =  "File"                         
+        Save-AzureRmProfile -Path $global:profilePath | Write-Verbose                        
     } 
 }
 
@@ -123,7 +122,6 @@ workflow Remove-AzureDtlLabVMs
     [CmdletBinding()]
     param(
         $Ids,
-        $credentialsKind,
         $profilePath
     )
 
@@ -131,7 +129,7 @@ workflow Remove-AzureDtlLabVMs
     {
         try
         {
-            LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
+            Select-AzureRmProfile -Path $profilePath | Out-Null
             $name = $id.Split('/')[-1]
             Write-Verbose "Removing virtual machine '$name' ..."
             $null = Remove-AzureRmResource -Force -ResourceId "$id"
@@ -171,7 +169,7 @@ try {
         $i++
         if ($batch.Count -eq $BatchSize -or $allVms.Count -eq $i)
         {
-            Remove-AzureDtlLabVMs -Ids $batch -ProfilePath $profilePath -credentialsKind $credentialsKind
+            Remove-AzureDtlLabVMs -Ids $batch -ProfilePath $profilePath
             $batch = @()
         }
     }
