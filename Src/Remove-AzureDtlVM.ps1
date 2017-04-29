@@ -129,7 +129,7 @@ workflow Remove-AzureDtlLabVMs
     {
         try
         {
-            Select-AzureRmProfile -Path $profilePath | Out-Null
+            $null = Select-AzureRmProfile -Path $profilePath
             $name = $id.Split('/')[-1]
             Write-Verbose "Removing virtual machine '$name' ..."
             $null = Remove-AzureRmResource -Force -ResourceId "$id"
