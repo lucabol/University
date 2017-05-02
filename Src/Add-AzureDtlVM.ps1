@@ -50,13 +50,6 @@ param
     [DateTime] $ExpiryDateTime = ([timezoneinfo]::ConvertTimeFromUtc([datetime]::UtcNow, [timezoneinfo]::FindSystemTimeZoneById($TimeZoneId))).Date.AddDays(1).AddHours(3)       
 )
 
-#### PS utility functions
-$ErrorActionPreference = "Stop"
-pushd $PSScriptRoot
-
-$global:VerbosePreference = $VerbosePreference
-$ProgressPreference = $VerbosePreference # Disable Progress Bar
-
 trap
 {
     # NOTE: This trap will handle all errors. There should be no need to use a catch below in this
@@ -64,97 +57,7 @@ trap
     Handle-LastError
 }
 
-function Report-Error {
-    [CmdletBinding()]
-    param($error)
-
-    $posMessage = $error.ToString() + "`n" + $error.InvocationInfo.PositionMessage
-    Write-Error "`nERROR: $posMessage" -ErrorAction "Continue"
-}
-
-function Handle-LastError
-{
-    [CmdletBinding()]
-    param()
-
-    Report-Error -error $_
-    LogOutput "All done!"
-    # IMPORTANT NOTE: Throwing a terminating error (using $ErrorActionPreference = "Stop") still
-    # returns exit code zero from the PowerShell script when using -File. The workaround is to
-    # NOT use -File when calling this script and leverage the try-catch-finally block and return
-    # a non-zero exit code from the catch block.
-    exit -1
-}
-
-function LogOutput {         
-    [CmdletBinding()]
-    param($msg)
-    $timestamp = (Get-Date).ToUniversalTime()
-    $output = "$timestamp [INFO]:: $msg"    
-    Write-Verbose $output
-}
-
-### Azure utility functions
-
-function LoadAzureCredentials {
-    [CmdletBinding()]
-    param($credentialsKind, $profilePath)
-
-    Write-Verbose "Credentials Kind: $credentialsKind"
-    Write-Verbose "Credentials File: $profilePath"
-
-    if(($credentialsKind -ne "File") -and ($credentialsKind -ne "RunBook")) {
-        throw "CredentialsKind must be either 'File' or 'RunBook'. It was $credentialsKind instead"
-    }
-
-    if($credentialsKind -eq "File") {
-        if (! (Test-Path $profilePath)) {
-            throw "Profile file(s) not found at $profilePath. Exiting script..."    
-        }
-        Select-AzureRmProfile -Path $profilePath | Out-Null
-    } else {
-        $connectionName = "AzureRunAsConnection"
-        $SubId = Get-AutomationVariable -Name 'SubscriptionId'
-
-        $servicePrincipalConnection = Get-AutomationConnection -Name $connectionName         
-
-        Add-AzureRmAccount `
-            -ServicePrincipal `
-            -TenantId $servicePrincipalConnection.TenantId `
-            -ApplicationId $servicePrincipalConnection.ApplicationId `
-            -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint
-        
-        Set-AzureRmContext -SubscriptionId $servicePrincipalConnection.SubscriptionID 
-
-        # Save profile so it can be used later and set credentialsKind to "File"
-        $global:profilePath = (Join-Path $env:TEMP  (New-guid).Guid)
-        Save-AzureRmProfile -Path $global:profilePath | Write-Verbose
-        $global:credentialsKind =  "File"                          
-    } 
-}
-
-### DTL utility functions
-
-function GetLab {
-    [CmdletBinding()]
-    param($LabName)
-    $lab = Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs" -ResourceNameContains $LabName  | where ResourceName -EQ "$LabName"
-    LogOutput "Lab: $lab"
-    return $lab
-}
-
-function GetAllLabVMsExpanded {
-    [CmdletBinding()]
-    param($LabName)
-
-    return Find-AzureRmResource -ResourceType 'Microsoft.DevTestLab/labs/virtualmachines' -ResourceNameContains "$LabName/" -ExpandProperties | ? { $_.ResourceName -like "$LabName/*" }    
-}
-
-function GetResourceGroupName {
-    [CmdletBinding()]
-    param($LabName)
-    return (GetLab -labname $LabName).ResourceGroupName    
-}
+. .\Common.ps1
 
 function ConvertTo-Hashtable
 {
@@ -325,7 +228,6 @@ try {
             shutDownTime = $ShutDownTimeHours
             timeZoneId = $TimeZoneId
         }
-    
     New-AzureRmResourceGroupDeployment -Name $shutDeployment -ResourceGroupName $ResourceGroupName -TemplateFile $ShutdownPath -TemplateParameterObject $shutParams | Write-Verbose
     LogOutput "Shutdown time deployed."
 
