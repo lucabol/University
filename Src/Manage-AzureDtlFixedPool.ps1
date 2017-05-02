@@ -240,7 +240,7 @@ try {
             try {
                 $tokens["Name"] = $VMNameBase + $i.ToString()
                 LogOutput "Processing batch: $i"
-                Create-VirtualMachines -LabId $labId -Tokens $tokens -path $TemplatePath
+                Create-VirtualMachines -LabId $labId -Tokens $tokens -content $templateContent
                 LogOutput "Finished processing batch: $i"
             } catch {
                 Report-Error $_
@@ -254,7 +254,7 @@ try {
                 LogOutput "Processing reminder"
                 $tokens["Name"] = $VMNameBase + "Rm"
                 $tokens["Count"] = $rem
-                Create-VirtualMachines -LabId $labId -Tokens $tokens -path $TemplatePath
+                Create-VirtualMachines -LabId $labId -Tokens $tokens -content $templateContent
                 LogOutput "Finished processing reminder"
             } catch {
                 Report-Error $_
