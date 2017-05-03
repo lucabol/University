@@ -38,6 +38,18 @@ function LogOutput {
 
 ### Azure utility functions
 
+function InferCredentials {
+    [CmdletBinding()]
+    param()
+    if($PSPrivateMetadata.JobId) {
+        return "Runbook"
+    }
+    else {
+        return "File"
+    }
+    
+}
+
 function LoadAzureCredentials {
     [CmdletBinding()]
     param($credentialsKind, $profilePath)
@@ -56,7 +68,6 @@ function LoadAzureCredentials {
         Select-AzureRmProfile -Path $profilePath | Out-Null
     } else {
         $connectionName = "AzureRunAsConnection"
-        $SubId = Get-AutomationVariable -Name 'SubscriptionId'
 
         $servicePrincipalConnection = Get-AutomationConnection -Name $connectionName         
 
@@ -66,12 +77,12 @@ function LoadAzureCredentials {
             -ApplicationId $servicePrincipalConnection.ApplicationId `
             -CertificateThumbprint $servicePrincipalConnection.CertificateThumbprint
         
-        Set-AzureRmContext -SubscriptionId $servicePrincipalConnection.SubscriptionID 
+        #Set-AzureRmContext -SubscriptionId $servicePrincipalConnection.SubscriptionID 
+        Select-AzureRmSubscription -SubscriptionId $servicePrincipalConnection.SubscriptionID  | Write-Verbose
 
         # Save profile so it can be used later and set credentialsKind to "File"
         $global:profilePath = (Join-Path $env:TEMP  (New-guid).Guid)
         Save-AzureRmProfile -Path $global:profilePath | Write-Verbose
-        $global:credentialsKind =  "File"                          
     } 
 }
 
@@ -114,4 +125,165 @@ function GetDtlVmStatus {
     $compVM = Get-azurermvm -ResourceGroupName $computeGroup -name $name -Status
 
     return $compVM.Statuses.Code[1]
+}
+
+#### Removing VMs
+
+# Function to return the Automation account information that this job is running in.
+Function WhoAmI
+{
+    $AutomationResource = Find-AzureRmResource -ResourceType Microsoft.Automation/AutomationAccounts
+
+    foreach ($Automation in $AutomationResource)
+    {
+        $Job = Get-AzureRmAutomationJob -ResourceGroupName $Automation.ResourceGroupName -AutomationAccountName $Automation.Name -Id $PSPrivateMetadata.JobId.Guid -ErrorAction SilentlyContinue
+        if (!([string]::IsNullOrEmpty($Job)))
+        {
+            $AutomationInformation = @{}
+            $AutomationInformation.Add("SubscriptionId",$Automation.SubscriptionId)
+            $AutomationInformation.Add("Location",$Automation.Location)
+            $AutomationInformation.Add("ResourceGroupName",$Job.ResourceGroupName)
+            $AutomationInformation.Add("AutomationAccountName",$Job.AutomationAccountName)
+            $AutomationInformation.Add("RunbookName",$Job.RunbookName)
+            $AutomationInformation.Add("JobId",$Job.JobId.Guid)
+            $AutomationInformation
+            break;
+        }
+    }
+}
+
+# workflow Remove-AzureDtlLabVMs
+# {
+#     [CmdletBinding()]
+#     param($Ids,$profilePath)
+
+#     foreach -parallel ($id in $Ids)
+#     {
+#         try
+#         {
+#             $null = Select-AzureRmProfile -Path $profilePath
+#             $name = $id.Split('/')[-1]
+#             Write-Verbose "Removing virtual machine $name ..."
+#             $null = Remove-AzureRmResource -Force -ResourceId "$id"
+#             Write-Verbose "Done Removing $name ."
+#         }
+#         catch
+#         {
+#             Report-Error $_
+#         }
+#     }
+# }
+
+function RemoveBatchVMs {
+    [CmdletBinding()]
+    param($vms,$BatchSize, $credentialsKind, $profilePath)
+
+    LogOutput "Removing VMs: $vm"
+    $batch = @(); $i = 0;
+
+    $vms | % {
+        $batch += $_.ResourceId
+        $i++
+        if ($batch.Count -eq $BatchSize -or $vms.Count -eq $i)
+        {
+            if($credentialsKind -eq "File") {
+                LogOutput "We are in the File path"
+                . .\Remove-AzureDtlLabVMs -Ids $batch
+            } else {
+                LogOutput "We are in the Runbook path"
+                # Get Account information on where this job is running from
+                $AccountInfo = WhoAmI
+                $RunbookName = "Remove-AzureDtlLabVMs"
+
+                $RunbookNameParams = @{}
+                $RunbookNameParams.Add("Ids",$batch)
+                Start-AzureRmAutomationRunbook -ResourceGroupName $AccountInfo.ResourceGroupName -AutomationAccountName $AccountInfo.AutomationAccountName -Name $RunbookName -Parameters $RunbookNameParams | Out-Null
+            }
+            if($vms.Count -gt $i) {
+                LogOutput "Waiting between batches to avoid executing too many things in parallel"
+                Start-sleep -Seconds 240
+            }
+            $batch = @()
+        }
+    }    
+}
+
+### Creating VMs
+
+function ConvertTo-Hashtable
+{
+    param(
+        [Parameter(ValueFromPipeline)]
+        [string] $Content
+    )
+
+    [void][System.Reflection.Assembly]::LoadWithPartialName("System.Web.Extensions")  
+    $parser = New-Object Web.Script.Serialization.JavaScriptSerializer   
+    Write-Output -NoEnumerate $parser.DeserializeObject($Content)
+}
+
+function Create-ParamsJson
+{
+    [CmdletBinding()]
+    Param(
+        [string] $Content,
+        [hashtable] $Tokens,
+        [switch] $Compress
+    )
+
+    $replacedContent = (Replace-Tokens -Content $Content -Tokens $Tokens)
+    
+    if ($Compress)
+    {
+        return (($replacedContent.Split("`r`n").Trim()) -join '').Replace(': ', ':')
+    }
+    else
+    {
+        return $replacedContent
+    }
+}
+
+function Create-VirtualMachines
+{
+    [CmdletBinding()]
+    Param(
+        [string] $content,
+        [string] $LabId,
+        [hashtable] $Tokens
+    )
+
+    try {
+        $json = Create-ParamsJson -Content $content -Tokens $tokens
+        LogOutput $json
+
+        $parameters = $json | ConvertTo-Hashtable
+
+        Invoke-AzureRmResourceAction -ResourceId "$LabId" -Action CreateEnvironment -Parameters $parameters -Force  | Out-Null
+    } catch {
+            Report-Error $_        
+    }
+
+}
+
+function Extract-Tokens
+{
+    [CmdletBinding()]
+    Param(
+        [string] $Content
+    )
+    
+    ([Regex]'__(?<Token>.*?)__').Matches($Content).Value.Trim('__')
+}
+
+function Replace-Tokens
+{
+    [CmdletBinding()]
+    Param(
+        [string] $Content,
+        [hashtable] $Tokens
+    )
+    
+    $Tokens.GetEnumerator() | % { $Content = $Content.Replace("__$($_.Key)__", "$($_.Value)") }
+    
+    return $Content
 }

@@ -44,120 +44,18 @@ trap
 
 . .\Common.ps1
 
-function ConvertTo-Hashtable
-{
-    param(
-        [Parameter(ValueFromPipeline)]
-        [string] $Content
-    )
-
-    [void][System.Reflection.Assembly]::LoadWithPartialName("System.Web.Extensions")  
-    $parser = New-Object Web.Script.Serialization.JavaScriptSerializer   
-    Write-Output -NoEnumerate $parser.DeserializeObject($Content)
-}
-
-function Create-ParamsJson
-{
-    [CmdletBinding()]
-    Param(
-        [string] $Content,
-        [hashtable] $Tokens,
-        [switch] $Compress
-    )
-
-    $replacedContent = (Replace-Tokens -Content $Content -Tokens $Tokens)
-    
-    if ($Compress)
-    {
-        return (($replacedContent.Split("`r`n").Trim()) -join '').Replace(': ', ':')
-    }
-    else
-    {
-        return $replacedContent
-    }
-}
-
-function Create-VirtualMachines
-{
-    [CmdletBinding()]
-    Param(
-        [string] $content,
-        [string] $LabId,
-        [hashtable] $Tokens
-    )
-
-    $json = Create-ParamsJson -Content $content -Tokens $tokens
-    LogOutput $json
-
-    $parameters = $json | ConvertTo-Hashtable
-
-    Invoke-AzureRmResourceAction -ResourceId "$LabId" -Action CreateEnvironment -Parameters $parameters -Force  | Out-Null
-}
-
-
-function Extract-Tokens
-{
-    [CmdletBinding()]
-    Param(
-        [string] $Content
-    )
-    
-    ([Regex]'__(?<Token>.*?)__').Matches($Content).Value.Trim('__')
-}
-
-function Replace-Tokens
-{
-    [CmdletBinding()]
-    Param(
-        [string] $Content,
-        [hashtable] $Tokens
-    )
-    
-    $Tokens.GetEnumerator() | % { $Content = $Content.Replace("__$($_.Key)__", "$($_.Value)") }
-    
-    return $Content
-}
-
-workflow Remove-AzureDtlLabVMs
-{
-    [CmdletBinding()]
-    param(
-        $Ids,
-        $credentialsKind,
-        $profilePath
-    )
-
-    foreach -parallel ($id in $Ids)
-    {
-        try
-        {
-            LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
-            $name = $id.Split('/')[-1]
-            LogOutput "Removing virtual machine '$name' ..."
-            $null = Remove-AzureRmResource -Force -ResourceId "$id"
-            LogOutput "Done Removing"
-        }
-        catch
-        {
-            Report-Error $f_
-        }
-    }
-}
-
-#### Main script
-
 $errors = @()
 
 try {
 
-    if($PSPrivateMetadata.JobId) {
-        $credentialsKind = "Runbook"
+    $credentialsKind = InferCredentials
+
+    if($credentialsKind -eq "Runbook") {
         $path = Get-AutomationVariable -Name 'TemplatePath'
         $file = Invoke-WebRequest -Uri $path -UseBasicParsing
         $templateContent = $file.Content
     }
     else {
-        $credentialsKind =  "File"
         $path = Resolve-Path $TemplatePath
         $templateContent = [IO.File]::ReadAllText($path)
     }
@@ -237,29 +135,19 @@ try {
 
         # Iterating loops time
         for($i = 0; $i -lt $loops; $i++) {
-            try {
-                $tokens["Name"] = $VMNameBase + $i.ToString()
-                LogOutput "Processing batch: $i"
-                Create-VirtualMachines -LabId $labId -Tokens $tokens -content $templateContent
-                LogOutput "Finished processing batch: $i"
-            } catch {
-                Report-Error $_
-                LogOutput "Moving on to next batch after error"            
-            }
+            $tokens["Name"] = $VMNameBase + $i.ToString()
+            LogOutput "Processing batch: $i"
+            Create-VirtualMachines -LabId $labId -Tokens $tokens -content $templateContent
+            LogOutput "Finished processing batch: $i"
         }
 
         # Process reminder
         if($rem -ne 0) {
-            try {
-                LogOutput "Processing reminder"
-                $tokens["Name"] = $VMNameBase + "Rm"
-                $tokens["Count"] = $rem
-                Create-VirtualMachines -LabId $labId -Tokens $tokens -content $templateContent
-                LogOutput "Finished processing reminder"
-            } catch {
-                Report-Error $_
-                LogOutput "Moving on to next batch after error"            
-            }           
+            LogOutput "Processing reminder"
+            $tokens["Name"] = $VMNameBase + "Rm"
+            $tokens["Count"] = $rem
+            Create-VirtualMachines -LabId $labId -Tokens $tokens -content $templateContent
+            LogOutput "Finished processing reminder"
         }
     }
 
@@ -273,22 +161,9 @@ try {
 
     LogOutput "Failed:$($failedVms.Count), Stopped: $($stoppedVms.Count), ToDelete: $($toDelete.Count)"
 
-    $batch = @(); $i = 0;
-
-    $toDelete | % {
-        $batch += $_.ResourceId
-        $i++
-        if ($batch.Count -eq $BatchSize -or $toDelete.Count -eq $i)
-        {
-            Remove-AzureDtlLabVMs -Ids $batch -ProfilePath $profilePath -credentialsKind $credentialsKind
-            $batch = @()
-        }
-    }
+    RemoveBatchVms -vms $toDelete -batchSize $batchSize -profilePath $profilePath -credentialsKind $credentialsKind
     LogOutput "Deleted $($toDelete.Count) VMs"
 
-    if($errors) {
-        throw $errors
-    }
     LogOutput "All done!"
 
 } finally {

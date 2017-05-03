@@ -4,7 +4,7 @@ param
     [Parameter(Mandatory=$true, HelpMessage="Name of Lab")]
     [string] $LabName,
 
-    [Parameter(Mandatory=$true, HelpMessage="Number of instances to create")]
+    [Parameter(Mandatory=$true, HelpMessage="Number of VMs to create with this execution")]
     [int] $VMCount,
 
     [Parameter(Mandatory=$true, HelpMessage="Name of base image in lab")]
@@ -12,6 +12,9 @@ param
 
     [Parameter(Mandatory=$true, HelpMessage="Shutdown time for the VMs in the lab. In form of 'HH:mm' in TimeZoneID timezone")]
     [string] $ShutDownTime,
+
+    [Parameter(Mandatory=$true, HelpMessage="Desired total number of VMs in the lab")]
+    [int] $TotalLabSize,
 
     [Parameter(Mandatory=$false, HelpMessage="How many VMs to create in each batch")]
     [int] $BatchSize = 30,
@@ -59,111 +62,10 @@ trap
 
 . .\Common.ps1
 
-function ConvertTo-Hashtable
-{
-    param(
-        [Parameter(ValueFromPipeline)]
-        [string] $Content
-    )
-
-    [void][System.Reflection.Assembly]::LoadWithPartialName("System.Web.Extensions")  
-    $parser = New-Object Web.Script.Serialization.JavaScriptSerializer   
-    Write-Output -NoEnumerate $parser.DeserializeObject($Content)
-}
-
-function Create-ParamsJson
-{
-    [CmdletBinding()]
-    Param(
-        [string] $Content,
-        [hashtable] $Tokens,
-        [switch] $Compress
-    )
-
-    $replacedContent = (Replace-Tokens -Content $Content -Tokens $Tokens)
-    
-    if ($Compress)
-    {
-        return (($replacedContent.Split("`r`n").Trim()) -join '').Replace(': ', ':')
-    }
-    else
-    {
-        return $replacedContent
-    }
-}
-
-function Create-VirtualMachines
-{
-    [CmdletBinding()]
-    Param(
-        [string] $content,
-        [string] $LabId,
-        [hashtable] $Tokens
-    )
-
-    $json = Create-ParamsJson -Content $content -Tokens $tokens
-    LogOutput $json
-
-    $parameters = $json | ConvertTo-Hashtable
-
-    Invoke-AzureRmResourceAction -ResourceId "$LabId" -Action CreateEnvironment -Parameters $parameters -Force  | Out-Null
-}
-
-function Extract-Tokens
-{
-    [CmdletBinding()]
-    Param(
-        [string] $Content
-    )
-    
-    ([Regex]'__(?<Token>.*?)__').Matches($Content).Value.Trim('__')
-}
-
-function Replace-Tokens
-{
-    [CmdletBinding()]
-    Param(
-        [string] $Content,
-        [hashtable] $Tokens
-    )
-    
-    $Tokens.GetEnumerator() | % { $Content = $Content.Replace("__$($_.Key)__", "$($_.Value)") }
-    
-    return $Content
-}
-
-workflow Remove-AzureDtlLabVMs
-{
-    [CmdletBinding()]
-    param(
-        $Ids,
-        $credentialsKind,
-        $profilePath
-    )
-
-    foreach -parallel ($id in $Ids)
-    {
-        try
-        {
-            LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
-            $name = $id.Split('/')[-1]
-            LogOutput "Removing virtual machine '$name' ..."
-            $null = Remove-AzureRmResource -Force -ResourceId "$id"
-            LogOutput "Done Removing"
-        }
-        catch
-        {
-            Report-Error -error $_
-        }
-    }
-}
-
-#### Main script
-
 try {
+    $credentialsKind = InferCredentials
 
-    if($PSPrivateMetadata.JobId) {
-        $credentialsKind = "Runbook"
+    if($credentialsKind -eq "Runbook") {
         $ShutdownPath = Get-AutomationVariable -Name 'ShutdownPath'
         $VNetName = Get-AutomationVariable -Name 'VNetName'
         $SubnetName = Get-AutomationVariable -Name 'SubnetName'
@@ -173,7 +75,6 @@ try {
         $templateContent = $file.Content
     }
     else {
-        $credentialsKind =  "File"
         $path = Resolve-Path $TemplatePath
         $templateContent = [IO.File]::ReadAllText($path)
     }
@@ -231,67 +132,67 @@ try {
     New-AzureRmResourceGroupDeployment -Name $shutDeployment -ResourceGroupName $ResourceGroupName -TemplateFile $ShutdownPath -TemplateParameterObject $shutParams | Write-Verbose
     LogOutput "Shutdown time deployed."
 
-    LogOutput "Start creating VMs ..."
-    $labId = "/subscriptions/$SubscriptionId/resourcegroups/$ResourceGroupName/providers/Microsoft.DevTestLab/labs/$LabName"
-    LogOutput "LabId: $labId"
-   
-    # Create unique name base for this deployment by taking the current time in seconds from a startDate, for the sake of using less characters
-    # as the max number of characters in an Azure vm name is 16. This algo should produce vmXXXXXXXX (10 chars) leaving 6 chars free for the VM number
-    $baseDate = get-date -date "01-01-2016"
-    $ticksFromBase = (get-date).ticks - $baseDate.Ticks
-    $secondsFromBase = [math]::Floor($ticksFromBase / 10000000)
-    $VMNameBase = $VMNameBase + $secondsFromBase.ToString()
-    LogOutput "Base Name $VMNameBase"
+    # Check that the Lab is not already full
+    [array] $vms = GetAllLabVMsExpanded -LabName $LabName
+    [array] $failed = $vms | ? { $_.Properties.provisioningState -eq 'Failed' }
+    $MissingVMs = $TotalLabSize - $vms.count + $failedVms.count
 
-    $tokens = @{
-        Count = $BatchSize
-        ExpirationDate = $ExpirationDate
-        ImageName = "/subscriptions/$SubscriptionID/ResourceGroups/$ResourceGroupName/providers/Microsoft.DevTestLab/labs/$LabName/customImages/$ImageName"
-        LabName = $LabName
-        Location = $location
-        Name = $VMNameBase
-        ResourceGroupName = $ResourceGroupName
-        ShutDownTime = $ShutDownTimeHours
-        Size = $Size
-        SubnetName = $SubnetName
-        SubscriptionId = $SubscriptionId
-        TimeZoneId = $TimeZoneId
-        VirtualNetworkName = $VNetName
-    }
+    # The script tries to create the minimum of what it was asked for and the missing VMs
+    $VMCount = [math]::min($VMCount, $MissingVMs)
+    # There could be few missing VMs, hence the size of batch can become more than VMs to create
+    $BatchSize = [math]::min($BatchSize, $VMCount)
 
-    $loops = [math]::Floor($VMCount / $BatchSize)
-    $rem = $VMCount - $loops * $BatchSize
-    LogOutput "VMCount: $vmcount, Loops: $loops, Rem: $rem"
+    LogOutput "Lab $LabName, Total VMS:$($vms.count), Failed:$($failedVms.count), Missing: $MissingVMs, ToCreate: $VMCount, Batches of: $BatchSize"
 
-    $creationError = $false
+    if($VMCount -gt 0) {
+        LogOutput "Start creating VMs ..."
+        $labId = "/subscriptions/$SubscriptionId/resourcegroups/$ResourceGroupName/providers/Microsoft.DevTestLab/labs/$LabName"
+        LogOutput "LabId: $labId"
+    
+        # Create unique name base for this deployment by taking the current time in seconds from a startDate, for the sake of using less characters
+        # as the max number of characters in an Azure vm name is 16. This algo should produce vmXXXXXXXX (10 chars) leaving 6 chars free for the VM number
+        $baseDate = get-date -date "01-01-2016"
+        $ticksFromBase = (get-date).ticks - $baseDate.Ticks
+        $secondsFromBase = [math]::Floor($ticksFromBase / 10000000)
+        $VMNameBase = $VMNameBase + $secondsFromBase.ToString()
+        LogOutput "Base Name $VMNameBase"
 
-    # Iterating loops time
-    for($i = 0; $i -lt $loops; $i++) {
-        try {
+        $tokens = @{
+            Count = $BatchSize
+            ExpirationDate = $ExpirationDate
+            ImageName = "/subscriptions/$SubscriptionID/ResourceGroups/$ResourceGroupName/providers/Microsoft.DevTestLab/labs/$LabName/customImages/$ImageName"
+            LabName = $LabName
+            Location = $location
+            Name = $VMNameBase
+            ResourceGroupName = $ResourceGroupName
+            ShutDownTime = $ShutDownTimeHours
+            Size = $Size
+            SubnetName = $SubnetName
+            SubscriptionId = $SubscriptionId
+            TimeZoneId = $TimeZoneId
+            VirtualNetworkName = $VNetName
+        }
+
+        $loops = [math]::Floor($VMCount / $BatchSize)
+        $rem = $VMCount - $loops * $BatchSize
+        LogOutput "VMCount: $vmcount, Loops: $loops, Rem: $rem"
+
+        # Iterating loops time
+        for($i = 0; $i -lt $loops; $i++) {
             $tokens["Name"] = $VMNameBase + $i.ToString()
             LogOutput "Processing batch: $i"
             Create-VirtualMachines -LabId $labId -Tokens $tokens -content $templateContent
             LogOutput "Finished processing batch: $i"
-        } catch {
-            $creationError = $true
-            Report-Error -error $_
-            LogOutput "Moving on to next batch after error"            
         }
-    }
 
-    # Process reminder
-    if($rem -ne 0) {
-        try {
+        # Process reminder
+        if($rem -ne 0) {
             LogOutput "Processing reminder"
             $tokens["Name"] = $VMNameBase + "Rm"
             $tokens["Count"] = $rem
             Create-VirtualMachines -LabId $labId -Tokens $tokens -content $templateContent
             LogOutput "Finished processing reminder"
-         } catch {
-            $creationError = $true
-            Report-Error -error $_
-            LogOutput "Moving on to next batch after error"            
-        }           
+        }
     }
 
     # Check if there are Failed VMs in the lab and deletes them, using the same batchsize as creation.
@@ -301,23 +202,8 @@ try {
     [array] $failed = $vms | ? { $_.Properties.provisioningState -eq 'Failed' }
     LogOutput "Detected $($failed.Count) failed VMs"
 
-    $batch = @(); $i = 0;
-
-    $failed | % {
-        $batch += $_.ResourceId
-        $i++
-        if ($batch.Count -eq $BatchSize -or $failed.Count -eq $i)
-        {
-            Remove-AzureDtlLabVMs -Ids $batch -ProfilePath $profilePath -credentialsKind $credentialsKind
-            $batch = @()
-        }
-    }
+    RemoveBatchVms -vms $failed -batchSize $batchSize -profilePath $profilePath -credentialsKind $credentialsKind
     LogOutput "Deleted $($failed.Count) failed VMs"
-
-    # An error is thrown if any batch creation in this script failed *NOT* if we found existing failed VMs in the lab.
-    if($creationError) {
-        throw "Deleted $($failed.Count) failed VMs"         
-    }
 
     LogOutput "All done!"
 

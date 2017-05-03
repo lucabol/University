@@ -21,45 +21,14 @@ trap
 
 . .\Common.ps1
 
-workflow Remove-AzureDtlLabVMs
-{
-    [CmdletBinding()]
-    param(
-        $Ids,
-        $credentialsKind,
-        $profilePath
-    )
-
-    foreach -parallel ($id in $Ids)
-    {
-        try
-        {
-            LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
-            $name = $id.Split('/')[-1]
-            Write-Verbose "Removing virtual machine '$name' ..."
-            $null = Remove-AzureRmResource -Force -ResourceId "$id"
-            Write-Verbose "Done Removing"
-        }
-        catch
-        {
-            Report-Error $_
-        }
-    }
-}
-
 #### Main script
 
 try {
     LogOutput "Start Removal"
 
-    if($PSPrivateMetadata.JobId) {
-        $credentialsKind = "Runbook"
-    }
-    else {
-        $credentialsKind =  "File"
-    }
-
+    $credentialsKind = InferCredentials
     LogOutput "Credentials: $credentialsKind"
+
     LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
 
     $ResourceGroupName = GetResourceGroupName -labname $LabName
@@ -67,17 +36,8 @@ try {
 
     [array] $allVms = GetAllLabVMs -labname $LabName
 
-    $batch = @(); $i = 0;
+    RemoveBatchVms -vms $allVms -batchSize $batchSize -profilePath $profilePath -credentialsKind $credentialsKind
 
-    $allVms | % {
-        $batch += $_.ResourceId
-        $i++
-        if ($batch.Count -eq $BatchSize -or $allVms.Count -eq $i)
-        {
-            Remove-AzureDtlLabVMs -Ids $batch -ProfilePath $profilePath -credentialsKind $credentialsKind
-            $batch = @()
-        }
-    }
     LogOutput "Deleted $($allVms.Count) VMs"
     LogOutput "All Done"
 

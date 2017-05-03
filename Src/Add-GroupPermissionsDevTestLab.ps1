@@ -23,17 +23,8 @@ trap
 
 . .\Common.ps1
 
-if($PSPrivateMetadata.JobId) {
-        $credentialsKind = "Runbook"
-}
-else {
-    $credentialsKind =  "File"
-}
-
+$credentialsKind = InferCredentials
 LogOutput "Credentials kind: $credentialsKind"
-
-
-$ErrorActionPreference = "Stop"
 
 LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
 

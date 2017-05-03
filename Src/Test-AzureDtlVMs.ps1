@@ -28,12 +28,7 @@ trap
 try {
     LogOutput "Start Testing Lab"
 
-    if($PSPrivateMetadata.JobId) {
-        $credentialsKind = "Runbook"
-    }
-    else {
-        $credentialsKind =  "File"
-    }
+    $credentialsKind = InferCredentials
 
     LogOutput "Credentials: $credentialsKind"
     LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
