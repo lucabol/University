@@ -66,7 +66,7 @@ try {
     $credentialsKind = InferCredentials
 
     if($credentialsKind -eq "Runbook") {
-        $file = Invoke-WebRequest -Uri $path -UseBasicParsing
+        $file = Invoke-WebRequest -Uri $TemplatePath -UseBasicParsing
         $templateContent = $file.Content
     }
     else {
