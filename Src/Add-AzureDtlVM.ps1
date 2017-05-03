@@ -66,11 +66,6 @@ try {
     $credentialsKind = InferCredentials
 
     if($credentialsKind -eq "Runbook") {
-        $ShutdownPath = Get-AutomationVariable -Name 'ShutdownPath'
-        $VNetName = Get-AutomationVariable -Name 'VNetName'
-        $SubnetName = Get-AutomationVariable -Name 'SubnetName'
-        $Size = Get-AutomationVariable -Name 'Size'
-        $path = Get-AutomationVariable -Name 'TemplatePath'
         $file = Invoke-WebRequest -Uri $path -UseBasicParsing
         $templateContent = $file.Content
     }
