@@ -78,6 +78,9 @@ try {
         throw "BatchSize must be less or equal to 100"
     }
     
+    # default batch size for removing failed VMs
+    $removeBatchSize = 2
+
     LogOutput "Start provisioning ..."
 
     LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
@@ -197,7 +200,7 @@ try {
     [array] $failed = $vms | ? { $_.Properties.provisioningState -eq 'Failed' }
     LogOutput "Detected $($failed.Count) failed VMs"
 
-    RemoveBatchVms -vms $failed -batchSize $batchSize -profilePath $profilePath -credentialsKind $credentialsKind
+    RemoveBatchVms -vms $failed -batchSize $removeBatchSize -profilePath $profilePath -credentialsKind $credentialsKind
     LogOutput "Deleted $($failed.Count) failed VMs"
 
     LogOutput "All done!"
