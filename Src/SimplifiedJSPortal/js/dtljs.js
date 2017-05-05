@@ -13,7 +13,7 @@ var claimedVm;
 var timeouHandle;
 
 // Connect And Token Functions 
-function connectAndStoreToken() {
+function ConnectAndStoreToken() {
   if (window.location.hash) {
     var fragments = {};
     var hashSegments = window.location.hash.substr(1).split('&');
