@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="js/dtljs.js"></script>
+    <script src="js/spin.min.js"></script>
+    <title>Simple ClaimVM Api</title>
+</head>
+<body onload="ConnectAndStoreToken()" >
+    
+    <div class="container">
+        <button onClick="ClaimAnyVm('d5e481ac-7346-47dc-9557-f405e1b3dcb0', 'Lab1RG067456', 'Lab1',function(response){alert('Success :' + response);}, function(response){alert('Failure :' + response);} )" class="btn btn-default">
+                ClaimAnyVM If Available
+            </button>
+        <br/>
+    </div>
+</body>
+</html>
