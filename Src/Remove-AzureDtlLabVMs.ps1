@@ -18,7 +18,7 @@ $deleteVmBlock = {
     param($id, $profilePath)
 
     try {
-        Select-AzureRmProfile -Path $profilePath | Out-Null
+        Import-AzureRmContext -Path $profilePath | Out-Null
 
         $name = $id.Split('/')[-1]
         Write-Verbose "Removing virtual machine $name ..."

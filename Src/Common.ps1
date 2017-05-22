@@ -65,7 +65,7 @@ function LoadAzureCredentials {
         if (! (Test-Path $profilePath)) {
             throw "Profile file(s) not found at $profilePath. Exiting script..."    
         }
-        Select-AzureRmProfile -Path $profilePath | Out-Null
+        Import-AzureRmContext -Path $profilePath | Out-Null
     } else {
         $connectionName = "AzureRunAsConnection"
 
@@ -82,7 +82,7 @@ function LoadAzureCredentials {
 
         # Save profile so it can be used later and set credentialsKind to "File"
         $global:profilePath = (Join-Path $env:TEMP  (New-guid).Guid)
-        Save-AzureRmProfile -Path $global:profilePath | Write-Verbose
+        Save-AzureRmContext -Path $global:profilePath | Write-Verbose
     } 
 }
 
@@ -151,28 +151,6 @@ Function WhoAmI
         }
     }
 }
-
-# workflow Remove-AzureDtlLabVMs
-# {
-#     [CmdletBinding()]
-#     param($Ids,$profilePath)
-
-#     foreach -parallel ($id in $Ids)
-#     {
-#         try
-#         {
-#             $null = Select-AzureRmProfile -Path $profilePath
-#             $name = $id.Split('/')[-1]
-#             Write-Verbose "Removing virtual machine $name ..."
-#             $null = Remove-AzureRmResource -Force -ResourceId "$id"
-#             Write-Verbose "Done Removing $name ."
-#         }
-#         catch
-#         {
-#             Report-Error $_
-#         }
-#     }
-# }
 
 function RemoveBatchVMs {
     [CmdletBinding()]
