@@ -75,7 +75,7 @@ try {
     $shutDeployment = $deploymentName + "Shutdown"
     LogOutput "Deployment Name: $deploymentName"
 
-    $SubscriptionID = (Get-AzureRmContext).Subscription.SubscriptionId
+    $SubscriptionID = (Get-AzureRmContext).Subscription.Id
     LogOutput "Subscription id: $SubscriptionID"
     $ResourceGroupName = GetResourceGroupName -labname $LabName
     LogOutput "Resource Group: $ResourceGroupName"
