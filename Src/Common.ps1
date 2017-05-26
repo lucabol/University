@@ -38,6 +38,14 @@ function LogOutput {
 
 ### Azure utility functions
 
+function GetAzureModuleVersion {
+    [CmdletBinding()]
+    param()
+    $az = (Get-Module -ListAvailable -Name Azure).Version
+    LogOutput "Azure Version: $az"
+    return $az   
+}
+
 function InferCredentials {
     [CmdletBinding()]
     param()
@@ -61,11 +69,17 @@ function LoadAzureCredentials {
         throw "CredentialsKind must be either 'File' or 'RunBook'. It was $credentialsKind instead"
     }
 
+    $azVer = GetAzureModuleVersion
+
     if($credentialsKind -eq "File") {
         if (! (Test-Path $profilePath)) {
             throw "Profile file(s) not found at $profilePath. Exiting script..."    
         }
-        Import-AzureRmContext -Path $profilePath | Out-Null
+        if($azVer -ge "3.8.0") {
+            Import-AzureRmContext -Path $profilePath | Out-Null
+        } else {
+            Select-AzureRmProfile -Path $profilePath | Out-Null
+        }
     } else {
         $connectionName = "AzureRunAsConnection"
 
@@ -82,7 +96,11 @@ function LoadAzureCredentials {
 
         # Save profile so it can be used later and set credentialsKind to "File"
         $global:profilePath = (Join-Path $env:TEMP  (New-guid).Guid)
-        Save-AzureRmContext -Path $global:profilePath | Write-Verbose
+        if($azVer -ge "3.8.0") {
+            Save-AzureRmContext -Path $global:profilePath | Write-Verbose
+        } else {
+            Save-AzureRmProfile -Path $global:profilePath | Write-Verbose
+        }
     } 
 }
 

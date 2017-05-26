@@ -75,7 +75,13 @@ try {
     $shutDeployment = $deploymentName + "Shutdown"
     LogOutput "Deployment Name: $deploymentName"
 
-    $SubscriptionID = (Get-AzureRmContext).Subscription.Id
+    $azVer = GetAzureModuleVersion
+    if($azVer -ge "3.8.0") {
+        $SubscriptionID = (Get-AzureRmContext).Subscription.Id
+    } else {
+        $SubscriptionID = (Get-AzureRmContext).Subscription.SubscriptionId
+    }
+    
     LogOutput "Subscription id: $SubscriptionID"
     $ResourceGroupName = GetResourceGroupName -labname $LabName
     LogOutput "Resource Group: $ResourceGroupName"

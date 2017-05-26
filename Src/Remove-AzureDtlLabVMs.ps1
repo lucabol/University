@@ -18,7 +18,13 @@ $deleteVmBlock = {
     param($id, $profilePath)
 
     try {
-        Import-AzureRmContext -Path $profilePath | Out-Null
+        $azVer = GetAzureModuleVersion
+        
+        if($azVer -ge "3.8.0") {
+            Save-AzureRmContext -Path $global:profilePath | Write-Verbose
+        } else {
+            Save-AzureRmProfile -Path $global:profilePath | Write-Verbose
+        }
 
         $name = $id.Split('/')[-1]
         Write-Verbose "Removing virtual machine $name ..."

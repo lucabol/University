@@ -28,7 +28,12 @@ LogOutput "Credentials kind: $credentialsKind"
 
 LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
 
-$SubscriptionID = (Get-AzureRmContext).Subscription.Id
+$azVer = GetAzureModuleVersion
+if($azVer -ge "3.8.0") {
+    $SubscriptionID = (Get-AzureRmContext).Subscription.Id
+} else {
+    $SubscriptionID = (Get-AzureRmContext).Subscription.SubscriptionId
+}
 
 $ResourceGroupName = (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs" -ResourceNameContains $LabName).ResourceGroupName
 
