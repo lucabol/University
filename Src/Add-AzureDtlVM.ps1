@@ -40,6 +40,7 @@ param
     [Parameter(Mandatory=$false, HelpMessage="TimeZone for machines")]
     [string] $TimeZoneId = "Central European Standard Time",
 
+    # TODO: remove parameter and code using it
     [Parameter(Mandatory=$false, HelpMessage="Fail if existing VMs in the lab")]
     [switch] $FailIfExisting,
 
@@ -108,6 +109,7 @@ try {
     $ResourceGroupName = GetResourceGroupName -labname $LabName
     LogOutput "Resource Group: $ResourceGroupName"
     
+    # TODO: delete this code when removing FailIfExisting
     if($FailIfExiting) {
         # Check to see if any VMs already exist in the lab. 
         LogOutput "Checking for existing VMs in $LabName"

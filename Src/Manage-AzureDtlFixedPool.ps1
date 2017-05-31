@@ -42,6 +42,8 @@ trap
     Handle-LastError
 }
 
+# TODO: check that it works, even tried out just a few times
+
 . .\Common.ps1
 
 $errors = @()
@@ -81,12 +83,13 @@ try {
     } else {
         $SubscriptionID = (Get-AzureRmContext).Subscription.SubscriptionId
     }
-    
+
     LogOutput "Subscription id: $SubscriptionID"
     $ResourceGroupName = GetResourceGroupName -labname $LabName
     LogOutput "Resource Group: $ResourceGroupName"
 
 
+    # Get size of the managed pool
     $Lab = GetLab -LabName $LabName
     $poolSize = $Lab.Tags.PoolSize
     if(! $poolSize) {

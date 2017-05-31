@@ -45,6 +45,7 @@ foreach ($vm in $labVMs){
     {
         #force the VM deallocation
         Stop-AzureRmVM -Name $VM.Name -ResourceGroupName $labVmRGName -Force
+        # We could also remove the VM here instead of just deallocating it
 
     }
 
