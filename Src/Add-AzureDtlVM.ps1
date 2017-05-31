@@ -10,9 +10,6 @@ param
     [Parameter(Mandatory=$true, HelpMessage="Name of base image in lab")]
     [string] $ImageName,
 
-    [Parameter(Mandatory=$true, HelpMessage="Shutdown time for the VMs in the lab. In form of 'HH:mm' in TimeZoneID timezone")]
-    [string] $ShutDownTime,
-
     [Parameter(Mandatory=$true, HelpMessage="Desired total number of VMs in the lab")]
     [int] $TotalLabSize,
 
@@ -43,14 +40,21 @@ param
     [Parameter(Mandatory=$false, HelpMessage="TimeZone for machines")]
     [string] $TimeZoneId = "Central European Standard Time",
 
+    # TODO: remove parameter and code using it
     [Parameter(Mandatory=$false, HelpMessage="Fail if existing VMs in the lab")]
     [switch] $FailIfExisting,
 
     [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure Profile")]
     [string] $profilePath = "$env:APPDATA\AzProfile.txt",
 
-    [Parameter(Mandatory=$false, HelpMessage="Expiry DateTime (as YYYY-MM-DDTHH:mm:ss or other parsable datetime) in TimeZoneID timezone (defaults to the shutdown time)")]
-    [DateTime] $ExpiryDateTime = ([timezoneinfo]::ConvertTimeFromUtc([datetime]::UtcNow, [timezoneinfo]::FindSystemTimeZoneById($TimeZoneId))).Date.AddDays(1).AddHours(3)       
+    [Parameter(Mandatory=$false, HelpMessage="How many days before expiring the VMs (-1 never, 0 today, 1 tomorrow, 2 .... Defaults to tomorrow.")]
+    [int] $DaysToExpiry = 1,
+
+    [Parameter(Mandatory=$false, HelpMessage="What time to expire the VMs at. Defaults to 3am. In form of 'HH:mm' in TimeZoneID timezone")]
+    [string] $ExpirationTime = "03:00",
+
+    [Parameter(Mandatory=$false, HelpMessage="Shutdown time for the VMs in the lab. In form of 'HH:mm' in TimeZoneID timezone")]
+    [string] $ShutDownTime = $ExpirationTime       
 )
 
 trap
@@ -84,7 +88,7 @@ try {
     LogOutput "Start provisioning ..."
 
     LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
-
+    
     # Create deployment names
     $depTime = (Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmss")
     LogOutput "StartTime: $depTime"
@@ -94,11 +98,18 @@ try {
     LogOutput "Shutdown Deployment Name: $shutDeployment"
     LogOutput "Shutdown time: $ShutDownTime"
 
-    $SubscriptionID = (Get-AzureRmContext).Subscription.Id
+    $azVer = GetAzureModuleVersion
+    if($azVer -ge "3.8.0") {
+        $SubscriptionID = (Get-AzureRmContext).Subscription.Id
+    } else {
+        $SubscriptionID = (Get-AzureRmContext).Subscription.SubscriptionId
+    }
+    
     LogOutput "Subscription id: $SubscriptionID"
     $ResourceGroupName = GetResourceGroupName -labname $LabName
     LogOutput "Resource Group: $ResourceGroupName"
-
+    
+    # TODO: delete this code when removing FailIfExisting
     if($FailIfExiting) {
         # Check to see if any VMs already exist in the lab. 
         LogOutput "Checking for existing VMs in $LabName"
@@ -110,7 +121,16 @@ try {
     }
 
     # Set the expiration date. This needs to be passed to DevTestLab in UTC time, so it is converted to UTC from TimeZoneId time
-    $tz = [system.timezoneinfo]::FindSystemTimeZoneById($TimeZoneId)
+    if($DaysToExpiry -lt 0) {
+        $DaysToExpiry = 365 * 100 # Expire in 100 years (aka never) 
+    }
+
+    $tz = [timezoneinfo]::FindSystemTimeZoneById($TimeZoneId)
+    $ExpiryDateTime = ([timezoneinfo]::ConvertTimeFromUtc([datetime]::UtcNow, $tz))
+    $ExpiryDateTime = $ExpiryDateTime.Date.AddDays($DaysToExpiry)
+    $Time = [System.Timespan]::Parse($ExpirationTime)
+    $ExpiryDateTime = $ExpiryDateTime.Add($Time)
+    
     $ExpirationUtc = [system.timezoneinfo]::ConvertTimeToUtc($ExpiryDateTime, $tz)
     if($ExpirationUtc -le [DateTime]::UtcNow) {
         throw "Expiration date $ShutDownDate (or in UTC $ExpirationUtc) must be in the future."

@@ -1,10 +1,13 @@
 #### PS utility functions
+# Stop at first error
 $ErrorActionPreference = "Stop"
 pushd $PSScriptRoot
 
+# Workaround to set verbose everywhere
 $global:VerbosePreference = $VerbosePreference
 $ProgressPreference = $VerbosePreference # Disable Progress Bar
 
+# Print nice error
 function Report-Error {
     [CmdletBinding()]
     param($error)
@@ -14,6 +17,7 @@ function Report-Error {
     Write-Error "`nERROR: $posMessage" -ErrorAction "Continue"
 }
 
+# Print error before exiting
 function Handle-LastError
 {
     [CmdletBinding()]
@@ -28,6 +32,7 @@ function Handle-LastError
     exit -1
 }
 
+# Common logging function
 function LogOutput {         
     [CmdletBinding()]
     param($msg)
@@ -38,6 +43,16 @@ function LogOutput {
 
 ### Azure utility functions
 
+# So that we can select which API to call when they get updated
+function GetAzureModuleVersion {
+    [CmdletBinding()]
+    param()
+    $az = (Get-Module -ListAvailable -Name Azure).Version
+    LogOutput "Azure Version: $az"
+    return $az   
+}
+
+# Are we running in Azure Automation?
 function InferCredentials {
     [CmdletBinding()]
     param()
@@ -50,6 +65,8 @@ function InferCredentials {
     
 }
 
+# Log in to Azure differently depending on where we are running
+# TODO: write down how to save credentials to file (look at current readme.md)
 function LoadAzureCredentials {
     [CmdletBinding()]
     param($credentialsKind, $profilePath)
@@ -61,11 +78,17 @@ function LoadAzureCredentials {
         throw "CredentialsKind must be either 'File' or 'RunBook'. It was $credentialsKind instead"
     }
 
+    $azVer = GetAzureModuleVersion
+
     if($credentialsKind -eq "File") {
         if (! (Test-Path $profilePath)) {
             throw "Profile file(s) not found at $profilePath. Exiting script..."    
         }
-        Import-AzureRmContext -Path $profilePath | Out-Null
+        if($azVer -ge "3.8.0") {
+            Import-AzureRmContext -Path $profilePath | Out-Null
+        } else {
+            Select-AzureRmProfile -Path $profilePath | Out-Null
+        }
     } else {
         $connectionName = "AzureRunAsConnection"
 
@@ -80,9 +103,14 @@ function LoadAzureCredentials {
         #Set-AzureRmContext -SubscriptionId $servicePrincipalConnection.SubscriptionID 
         Select-AzureRmSubscription -SubscriptionId $servicePrincipalConnection.SubscriptionID  | Write-Verbose
 
-        # Save profile so it can be used later and set credentialsKind to "File"
+        # Save profile so it can be used later
+        # TODO: consider cleaning it up so that it is a bit more encapsulated
         $global:profilePath = (Join-Path $env:TEMP  (New-guid).Guid)
-        Save-AzureRmContext -Path $global:profilePath | Write-Verbose
+        if($azVer -ge "3.8.0") {
+            Save-AzureRmContext -Path $global:profilePath | Write-Verbose
+        } else {
+            Save-AzureRmProfile -Path $global:profilePath | Write-Verbose
+        }
     } 
 }
 
@@ -103,6 +131,7 @@ function GetAllLabVMs {
     return Find-AzureRmResource -ResourceType 'Microsoft.DevTestLab/labs/virtualmachines' -ResourceNameContains "$LabName/" | ? { $_.ResourceName -like "$LabName/*" }
 } 
 
+# Get the expanded props as well (but slowly)
 function GetAllLabVMsExpanded {
     [CmdletBinding()]
     param($LabName)
@@ -110,12 +139,14 @@ function GetAllLabVMsExpanded {
     return Find-AzureRmResource -ResourceType 'Microsoft.DevTestLab/labs/virtualmachines' -ResourceNameContains "$LabName/" -ExpandProperties | ? { $_.ResourceName -like "$LabName/*" }    
 }
 
+# Get to the RG name from lab name (it will break if multiple labs with same name are allowed)
 function GetResourceGroupName {
     [CmdletBinding()]
     param($LabName)
     return (GetLab -labname $LabName).ResourceGroupName    
 }
 
+# Get status of VM inside a DTL
 function GetDtlVmStatus {
     [CmdletBinding()]
     param($vm)
@@ -152,6 +183,8 @@ Function WhoAmI
     }
 }
 
+# Removes virtual machines given their names, how to batch parallelize them and credentials
+# TODO: integrate automation creation runbook code instead of PS parallelization (Luca send sample code)
 function RemoveBatchVMs {
     [CmdletBinding()]
     param($vms,$BatchSize, $credentialsKind, $profilePath)
@@ -221,6 +254,7 @@ function Create-ParamsJson
     }
 }
 
+# Create VMs from a json description substituting TOKEN for __TOKEN__
 function Create-VirtualMachines
 {
     [CmdletBinding()]
@@ -253,6 +287,7 @@ function Extract-Tokens
     ([Regex]'__(?<Token>.*?)__').Matches($Content).Value.Trim('__')
 }
 
+# Substitute tokens in json
 function Replace-Tokens
 {
     [CmdletBinding()]
