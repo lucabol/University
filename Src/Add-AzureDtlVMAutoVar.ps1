@@ -10,9 +10,6 @@ param
     [Parameter(Mandatory=$true, HelpMessage="Name of base image in lab")]
     [string] $ImageName,
 
-    [Parameter(Mandatory=$true, HelpMessage="Shutdown time for the VMs in the lab. In form of 'HH:mm' in TimeZoneID timezone")]
-    [string] $ShutDownTime,
-
     [Parameter(Mandatory=$true, HelpMessage="Desired total number of VMs in the lab")]
     [int] $TotalLabSize,
 
@@ -20,7 +17,10 @@ param
     [int] $DaysToExpiry = 1,
 
     [Parameter(Mandatory=$false, HelpMessage="What time to expire the VMs at. Defaults to 3am. In form of 'HH:mm' in TimeZoneID timezone")]
-    [string] $ExpirationTime = "03:00"
+    [string] $ExpirationTime = "03:00",
+
+    [Parameter(Mandatory=$false, HelpMessage="Shutdown time for the VMs in the lab. In form of 'HH:mm' in TimeZoneID timezone")]
+    [string] $ShutDownTime = $ExpirationTime
 )
 
 trap
