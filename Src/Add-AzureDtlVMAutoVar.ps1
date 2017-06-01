@@ -14,7 +14,13 @@ param
     [string] $ShutDownTime,
 
     [Parameter(Mandatory=$true, HelpMessage="Desired total number of VMs in the lab")]
-    [int] $TotalLabSize
+    [int] $TotalLabSize,
+
+    [Parameter(Mandatory=$false, HelpMessage="How many days before expiring the VMs (-1 never, 0 today, 1 tomorrow, 2 .... Defaults to tomorrow.")]
+    [int] $DaysToExpiry = 1,
+
+    [Parameter(Mandatory=$false, HelpMessage="What time to expire the VMs at. Defaults to 3am. In form of 'HH:mm' in TimeZoneID timezone")]
+    [string] $ExpirationTime = "03:00"
 )
 
 trap
@@ -41,7 +47,7 @@ try {
     }
 
     . .\Add-AzureDtlVM.ps1 -LabName $LabName -VMCount $VMCount -ImageName $ImageName -ShutDownTime $ShutDownTime -TotalLabSize $TotalLabSize `
-                            -ShutdownPath $ShutdownPath -TemplatePath $TemplatePath -VNetName $VNetName -SubnetName $SubnetName -Size $Size
+                            -ShutdownPath $ShutdownPath -TemplatePath $TemplatePath -VNetName $VNetName -SubnetName $SubnetName -Size $Size -ExpirationTime $ExpirationTime -DaysToExpiry $DaysToExpiry
 } finally {
     if($credentialsKind -eq "File") {
         1..3 | % { [console]::beep(2500,300) } # Make a sound to indicate we're done if running from command line.
