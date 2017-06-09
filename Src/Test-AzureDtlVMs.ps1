@@ -1,21 +1,47 @@
+<#
+.SYNOPSIS 
+    Given LabName and LabSize, this script verifies how many Azure virtual machines are inside the DevTest Lab and throws an error inside the logs when the number is greater or lower than size +/- VMDelta. 
+
+.DESCRIPTION
+    Given LabName and LabSize, this script verifies how many Azure virtual machines are inside the DevTest Lab and throws an error inside the logs when the number is greater or lower than size +/- VMDelta. 
+
+.PARAMETER LabName
+    Mandatory. The name of the Dev Test Lab to clean up.
+
+.PARAMETER LabSize
+    Mandatory. Number of VMs that should be in the lab.
+
+.PARAMETER profilePath
+    Optional. Path to file with Azure Profile.
+    Default "$env:APPDATA\AzProfile.txt".
+
+.PARAMETER VMDelta
+    Optional. Percentage of error in number of VMs (i.e. 0.1 means the lab can contain 10% more or less VMs).
+    Default 0.1
+
+.EXAMPLE
+    Test-AzureDtlLabVMs -LabName Contoso -LabSize 50
+
+.NOTES
+
+#>
 [cmdletbinding()]
 param
 (
-    [Parameter(Mandatory=$true, HelpMessage="The name of the Dev Test Lab to clean up")]
+    [Parameter(Mandatory = $true, HelpMessage = "The name of the Dev Test Lab to clean up")]
     [string] $LabName,
 
-    [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure Profile")]
+    [Parameter(Mandatory = $false, HelpMessage = "Path to file with Azure Profile")]
     [string] $profilePath = "$env:APPDATA\AzProfile.txt",
 
-    [Parameter(Mandatory=$true, HelpMessage="Number of VMs that should be in the lab")]
+    [Parameter(Mandatory = $true, HelpMessage = "Number of VMs that should be in the lab")]
     [string] $LabSize,
 
-    [Parameter(Mandatory=$false, HelpMessage="Percentage of error in number of VMs (i.e. 0.1 means the lab can contain 10% more or less VMs)")]
+    [Parameter(Mandatory = $false, HelpMessage = "Percentage of error in number of VMs (i.e. 0.1 means the lab can contain 10% more or less VMs)")]
     [double] $VMDelta = 0.1    
 )
 
-trap
-{
+trap {
     # NOTE: This trap will handle all errors. There should be no need to use a catch below in this
     #       script, unless you want to ignore a specific error.
     Handle-LastError
@@ -44,15 +70,16 @@ try {
     $wrongCount = ($availableVMs -lt $LabSize * (1 - $VMDelta)) -or ($availableVMs -gt $LabSize * (1 + $VMDelta))
     $someFailed = $failedCount -ne 0
 
-    if($someFailed -or $wrongCount) {
+    if ($someFailed -or $wrongCount) {
         Write-Error "VMs count: $availableVMs / $LabSize, Failed VMs: $FailedCount"
-    } else {
+    }
+    else {
         Write-Output "The lab is as expected"
     }
 
 } finally {
-    if($credentialsKind -eq "File") {
-        1..3 | % { [console]::beep(2500,300) } # Make a sound to indicate we're done.
+    if ($credentialsKind -eq "File") {
+        1..3 | % { [console]::beep(2500, 300) } # Make a sound to indicate we're done.
     }
     popd
 }

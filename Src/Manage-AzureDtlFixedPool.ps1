@@ -1,42 +1,41 @@
 [cmdletbinding()]
 param 
 (
-    [Parameter(Mandatory=$true, HelpMessage="Name of Lab")]
+    [Parameter(Mandatory = $true, HelpMessage = "Name of Lab")]
     [string] $LabName,
 
-    [Parameter(Mandatory=$true, HelpMessage="Name of base image in lab")]
+    [Parameter(Mandatory = $true, HelpMessage = "Name of base image in lab")]
     [string] $ImageName,
 
-    [Parameter(Mandatory=$false, HelpMessage="How many VMs to create in each batch")]
+    [Parameter(Mandatory = $false, HelpMessage = "How many VMs to create in each batch")]
     [int] $BatchSize = 50,
 
-    [Parameter(Mandatory=$false, HelpMessage="Path to the Deployment Template File")]
+    [Parameter(Mandatory = $false, HelpMessage = "Path to the Deployment Template File")]
     [string] $TemplatePath = ".\dtl_multivm_customimage.json",
 
-    [Parameter(Mandatory=$false, HelpMessage="Size of VM image")]
+    [Parameter(Mandatory = $false, HelpMessage = "Size of VM image")]
     [string] $Size = "Standard_DS2",    
 
-    [Parameter(Mandatory=$false, HelpMessage="Prefix for new VMs")]
+    [Parameter(Mandatory = $false, HelpMessage = "Prefix for new VMs")]
     [string] $VMNameBase = "vm",
 
-    [Parameter(Mandatory=$false, HelpMessage="Virtual Network Name")]
+    [Parameter(Mandatory = $false, HelpMessage = "Virtual Network Name")]
     [string] $VNetName = "dtl$LabName",
 
-    [Parameter(Mandatory=$false, HelpMessage="SubNetName")]
+    [Parameter(Mandatory = $false, HelpMessage = "SubNetName")]
     [string] $SubnetName = "dtl" + $LabName + "SubNet",
 
-    [Parameter(Mandatory=$false, HelpMessage="Location for the Machines")]
+    [Parameter(Mandatory = $false, HelpMessage = "Location for the Machines")]
     [string] $location = "westeurope",
 
-    [Parameter(Mandatory=$false, HelpMessage="TimeZone for machines")]
+    [Parameter(Mandatory = $false, HelpMessage = "TimeZone for machines")]
     [string] $TimeZoneId = "Central European Standard Time",
 
-    [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure Profile")]
+    [Parameter(Mandatory = $false, HelpMessage = "Path to file with Azure Profile")]
     [string] $profilePath = "$env:APPDATA\AzProfile.txt"
 )
 
-trap
-{
+trap {
     # NOTE: This trap will handle all errors. There should be no need to use a catch below in this
     #       script, unless you want to ignore a specific error.
     Handle-LastError
@@ -52,7 +51,7 @@ try {
 
     $credentialsKind = InferCredentials
 
-    if($credentialsKind -eq "Runbook") {
+    if ($credentialsKind -eq "Runbook") {
         $path = Get-AutomationVariable -Name 'TemplatePath'
         $file = Invoke-WebRequest -Uri $path -UseBasicParsing
         $templateContent = $file.Content
@@ -62,7 +61,7 @@ try {
         $templateContent = [IO.File]::ReadAllText($path)
     }
 
-    if($BatchSize -gt 100) {
+    if ($BatchSize -gt 100) {
         throw "BatchSize must be less or equal to 100"
     }
     
@@ -74,13 +73,14 @@ try {
     $depTime = (Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmss")
     LogOutput "StartTime: $depTime"
     $deploymentName = "Deployment_$LabName_$depTime"
-    $shutDeployment = $deploymentName + "Shutdown"
+
     LogOutput "Deployment Name: $deploymentName"
 
     $azVer = GetAzureModuleVersion
-    if($azVer -ge "3.8.0") {
+    if ($azVer -ge "3.8.0") {
         $SubscriptionID = (Get-AzureRmContext).Subscription.Id
-    } else {
+    }
+    else {
         $SubscriptionID = (Get-AzureRmContext).Subscription.SubscriptionId
     }
 
@@ -92,7 +92,7 @@ try {
     # Get size of the managed pool
     $Lab = GetLab -LabName $LabName
     $poolSize = $Lab.Tags.PoolSize
-    if(! $poolSize) {
+    if (! $poolSize) {
         throw "The lab $LabName doesn't contain a PoolSize tag"
     }
 
@@ -109,7 +109,7 @@ try {
     $ExpirationDate = Get-date "3000-01-01"
 
     # Create VMs to refill the pool
-    if($vmToCreate -gt 0) {
+    if ($vmToCreate -gt 0) {
         LogOutput "Start creating VMs ..."
         $labId = "/subscriptions/$SubscriptionId/resourcegroups/$ResourceGroupName/providers/Microsoft.DevTestLab/labs/$LabName"
         LogOutput "LabId: $labId"
@@ -123,18 +123,18 @@ try {
         LogOutput "Base Name $VMNameBase"
 
         $tokens = @{
-            Count = $BatchSize
-            ExpirationDate = $ExpirationDate
-            ImageName = "/subscriptions/$SubscriptionID/ResourceGroups/$ResourceGroupName/providers/Microsoft.DevTestLab/labs/$LabName/customImages/$ImageName"
-            LabName = $LabName
-            Location = $location
-            Name = $VMNameBase
-            ResourceGroupName = $ResourceGroupName
-            ShutDownTime = $ShutDownTime
-            Size = $Size
-            SubnetName = $SubnetName
-            SubscriptionId = $SubscriptionId
-            TimeZoneId = $TimeZoneId
+            Count              = $BatchSize
+            ExpirationDate     = $ExpirationDate
+            ImageName          = "/subscriptions/$SubscriptionID/ResourceGroups/$ResourceGroupName/providers/Microsoft.DevTestLab/labs/$LabName/customImages/$ImageName"
+            LabName            = $LabName
+            Location           = $location
+            Name               = $VMNameBase
+            ResourceGroupName  = $ResourceGroupName
+            ShutDownTime       = $ShutDownTime
+            Size               = $Size
+            SubnetName         = $SubnetName
+            SubscriptionId     = $SubscriptionId
+            TimeZoneId         = $TimeZoneId
             VirtualNetworkName = $VNetName
         }
 
@@ -143,7 +143,7 @@ try {
         LogOutput "VMCount: $vmToCreate, Loops: $loops, Rem: $rem"
 
         # Iterating loops time
-        for($i = 0; $i -lt $loops; $i++) {
+        for ($i = 0; $i -lt $loops; $i++) {
             $tokens["Name"] = $VMNameBase + $i.ToString()
             LogOutput "Processing batch: $i"
             Create-VirtualMachines -LabId $labId -Tokens $tokens -content $templateContent
@@ -151,7 +151,7 @@ try {
         }
 
         # Process reminder
-        if($rem -ne 0) {
+        if ($rem -ne 0) {
             LogOutput "Processing reminder"
             $tokens["Name"] = $VMNameBase + "Rm"
             $tokens["Count"] = $rem
@@ -170,14 +170,14 @@ try {
 
     LogOutput "Failed:$($failedVms.Count), Stopped: $($stoppedVms.Count), ToDelete: $($toDelete.Count)"
 
-    RemoveBatchVms -vms $toDelete -batchSize $batchSize -profilePath $profilePath -credentialsKind $credentialsKind
+    RemoveBatchVms -vms $toDelete -batchSize $batchSize -credentialsKind $credentialsKind
     LogOutput "Deleted $($toDelete.Count) VMs"
 
     LogOutput "All done!"
 
 } finally {
-    if($credentialsKind -eq "File") {
-        1..3 | % { [console]::beep(2500,300) } # Make a sound to indicate we're done if running from command line.
+    if ($credentialsKind -eq "File") {
+        1..3 | % { [console]::beep(2500, 300) } # Make a sound to indicate we're done if running from command line.
     }
     popd
 }

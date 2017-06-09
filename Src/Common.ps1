@@ -18,8 +18,7 @@ function Report-Error {
 }
 
 # Print error before exiting
-function Handle-LastError
-{
+function Handle-LastError {
     [CmdletBinding()]
     param()
 
@@ -56,7 +55,7 @@ function GetAzureModuleVersion {
 function InferCredentials {
     [CmdletBinding()]
     param()
-    if($PSPrivateMetadata.JobId) {
+    if ($PSPrivateMetadata.JobId) {
         return "Runbook"
     }
     else {
@@ -74,22 +73,24 @@ function LoadAzureCredentials {
     Write-Verbose "Credentials Kind: $credentialsKind"
     Write-Verbose "Credentials File: $profilePath"
 
-    if(($credentialsKind -ne "File") -and ($credentialsKind -ne "RunBook")) {
+    if (($credentialsKind -ne "File") -and ($credentialsKind -ne "RunBook")) {
         throw "CredentialsKind must be either 'File' or 'RunBook'. It was $credentialsKind instead"
     }
 
     $azVer = GetAzureModuleVersion
 
-    if($credentialsKind -eq "File") {
+    if ($credentialsKind -eq "File") {
         if (! (Test-Path $profilePath)) {
             throw "Profile file(s) not found at $profilePath. Exiting script..."    
         }
-        if($azVer -ge "3.8.0") {
+        if ($azVer -ge "3.8.0") {
             Import-AzureRmContext -Path $profilePath | Out-Null
-        } else {
+        }
+        else {
             Select-AzureRmProfile -Path $profilePath | Out-Null
         }
-    } else {
+    }
+    else {
         $connectionName = "AzureRunAsConnection"
 
         $servicePrincipalConnection = Get-AutomationConnection -Name $connectionName         
@@ -106,9 +107,10 @@ function LoadAzureCredentials {
         # Save profile so it can be used later
         # TODO: consider cleaning it up so that it is a bit more encapsulated
         $global:profilePath = (Join-Path $env:TEMP  (New-guid).Guid)
-        if($azVer -ge "3.8.0") {
+        if ($azVer -ge "3.8.0") {
             Save-AzureRmContext -Path $global:profilePath | Write-Verbose
-        } else {
+        }
+        else {
             Save-AzureRmProfile -Path $global:profilePath | Write-Verbose
         }
     } 
@@ -161,22 +163,19 @@ function GetDtlVmStatus {
 #### Removing VMs
 
 # Function to return the Automation account information that this job is running in.
-Function WhoAmI
-{
+Function WhoAmI {
     $AutomationResource = Find-AzureRmResource -ResourceType Microsoft.Automation/AutomationAccounts
 
-    foreach ($Automation in $AutomationResource)
-    {
+    foreach ($Automation in $AutomationResource) {
         $Job = Get-AzureRmAutomationJob -ResourceGroupName $Automation.ResourceGroupName -AutomationAccountName $Automation.Name -Id $PSPrivateMetadata.JobId.Guid -ErrorAction SilentlyContinue
-        if (!([string]::IsNullOrEmpty($Job)))
-        {
+        if (!([string]::IsNullOrEmpty($Job))) {
             $AutomationInformation = @{}
-            $AutomationInformation.Add("SubscriptionId",$Automation.SubscriptionId)
-            $AutomationInformation.Add("Location",$Automation.Location)
-            $AutomationInformation.Add("ResourceGroupName",$Job.ResourceGroupName)
-            $AutomationInformation.Add("AutomationAccountName",$Job.AutomationAccountName)
-            $AutomationInformation.Add("RunbookName",$Job.RunbookName)
-            $AutomationInformation.Add("JobId",$Job.JobId.Guid)
+            $AutomationInformation.Add("SubscriptionId", $Automation.SubscriptionId)
+            $AutomationInformation.Add("Location", $Automation.Location)
+            $AutomationInformation.Add("ResourceGroupName", $Job.ResourceGroupName)
+            $AutomationInformation.Add("AutomationAccountName", $Job.AutomationAccountName)
+            $AutomationInformation.Add("RunbookName", $Job.RunbookName)
+            $AutomationInformation.Add("JobId", $Job.JobId.Guid)
             $AutomationInformation
             break;
         }
@@ -184,45 +183,80 @@ Function WhoAmI
 }
 
 # Removes virtual machines given their names, how to batch parallelize them and credentials
-# TODO: integrate automation creation runbook code instead of PS parallelization (Luca send sample code)
 function RemoveBatchVMs {
     [CmdletBinding()]
-    param($vms,$BatchSize, $credentialsKind, $profilePath)
+    param($vms, $BatchSize, $credentialsKind)
 
-    LogOutput "Removing VMs: $vm"
-    $batch = @(); $i = 0;
+    LogOutput "Removing VMs: $vms"
 
-    $vms | % {
-        $batch += $_.ResourceId
-        $i++
-        if ($batch.Count -eq $BatchSize -or $vms.Count -eq $i)
-        {
-            if($credentialsKind -eq "File") {
+    if ($credentialsKind -eq "File") {
+        $batch = @(); $i = 0;
+
+        $vms | % {
+            $batch += $_.ResourceId
+            $i++
+            if ($batch.Count -eq $BatchSize -or $vms.Count -eq $i) {
                 LogOutput "We are in the File path"
                 . .\Remove-AzureDtlLabVMs -Ids $batch
-            } else {
-                LogOutput "We are in the Runbook path"
-                # Get Account information on where this job is running from
-                $AccountInfo = WhoAmI
-                $RunbookName = "Remove-AzureDtlLabVMs"
 
-                $RunbookNameParams = @{}
-                $RunbookNameParams.Add("Ids",$batch)
-                Start-AzureRmAutomationRunbook -ResourceGroupName $AccountInfo.ResourceGroupName -AutomationAccountName $AccountInfo.AutomationAccountName -Name $RunbookName -Parameters $RunbookNameParams | Out-Null
+                if ($vms.Count -gt $i) {
+                    LogOutput "Waiting between batches to avoid executing too many things in parallel"
+                    Start-sleep -Seconds 240
+                }
+                $batch = @()
             }
-            if($vms.Count -gt $i) {
-                LogOutput "Waiting between batches to avoid executing too many things in parallel"
-                Start-sleep -Seconds 240
-            }
-            $batch = @()
         }
-    }    
+    }
+    else {
+        LogOutput "We are in the Runbook path"
+        # Get Account information on where this job is running from
+        $AccountInfo = WhoAmI
+        $RunbookName = "Remove-AzureDtlLabVMs"
+
+        # Process the list of VMs using the automation service and collect jobs used
+        $Jobs = @()      
+                                    
+        foreach ($VM in $vms) {   
+            # Start automation runbook to process VMs in parallel
+            $RunbookNameParams = @{}
+            $RunbookNameParams.Add("Ids", $VM)
+            # Loop here until a job was successfully submitted. Will stay in the loop until job has been submitted or an exception other than max allowed jobs is reached
+            while ($true) {
+                try {
+                    $Job = Start-AzureRmAutomationRunbook -ResourceGroupName $AccountInfo.ResourceGroupName -AutomationAccountName $AccountInfo.AutomationAccountName -Name $RunbookName -Parameters $RunbookNameParams -ErrorAction Stop
+                    $Jobs += $Job
+                    # Submitted job successfully, exiting while loop
+                    break
+                }
+                catch {
+                    # If we have reached the max allowed jobs, sleep backoff seconds and try again inside the while loop
+                    if ($_.Exception.Message -match "conflict") {
+                        Write-Verbose ("Sleeping for 30 seconds as max allowed jobs has been reached. Will try again afterwards")
+                        Start-Sleep 30
+                    }
+                    else {
+                        throw $_
+                    }
+                }
+            }
+        }
+                
+        # Wait for jobs to complete, fail, or suspend (final states allowed for a runbook)
+        $JobsResults = @()
+        foreach ($RunningJob in $Jobs) {
+            $ActiveJob = Get-AzureRMAutomationJob -ResourceGroupName $AccountInfo.ResourceGroupName -AutomationAccountName $AccountInfo.AutomationAccountName -Id $RunningJob.JobId
+            While ($ActiveJob.Status -ne "Completed" -and $ActiveJob.Status -ne "Failed" -and $ActiveJob.Status -ne "Suspended") {
+                Start-Sleep 30
+                $ActiveJob = Get-AzureRMAutomationJob -ResourceGroupName $AccountInfo.ResourceGroupName -AutomationAccountName $AccountInfo.AutomationAccountName -Id $RunningJob.JobId
+            }
+            $JobsResults += $ActiveJob
+        }
+    }
 }
 
 ### Creating VMs
 
-function ConvertTo-Hashtable
-{
+function ConvertTo-Hashtable {
     param(
         [Parameter(ValueFromPipeline)]
         [string] $Content
@@ -233,8 +267,7 @@ function ConvertTo-Hashtable
     Write-Output -NoEnumerate $parser.DeserializeObject($Content)
 }
 
-function Create-ParamsJson
-{
+function Create-ParamsJson {
     [CmdletBinding()]
     Param(
         [string] $Content,
@@ -244,19 +277,16 @@ function Create-ParamsJson
 
     $replacedContent = (Replace-Tokens -Content $Content -Tokens $Tokens)
     
-    if ($Compress)
-    {
+    if ($Compress) {
         return (($replacedContent.Split("`r`n").Trim()) -join '').Replace(': ', ':')
     }
-    else
-    {
+    else {
         return $replacedContent
     }
 }
 
 # Create VMs from a json description substituting TOKEN for __TOKEN__
-function Create-VirtualMachines
-{
+function Create-VirtualMachines {
     [CmdletBinding()]
     Param(
         [string] $content,
@@ -272,13 +302,12 @@ function Create-VirtualMachines
 
         Invoke-AzureRmResourceAction -ResourceId "$LabId" -Action CreateEnvironment -Parameters $parameters -Force  | Out-Null
     } catch {
-            Report-Error $_        
+        Report-Error $_        
     }
 
 }
 
-function Extract-Tokens
-{
+function Extract-Tokens {
     [CmdletBinding()]
     Param(
         [string] $Content
@@ -288,8 +317,7 @@ function Extract-Tokens
 }
 
 # Substitute tokens in json
-function Replace-Tokens
-{
+function Replace-Tokens {
     [CmdletBinding()]
     Param(
         [string] $Content,

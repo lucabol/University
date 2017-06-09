@@ -1,12 +1,28 @@
+<#
+.SYNOPSIS 
+    This script deletes every Azure virtual machines in the specified DevTest Lab.
+
+.DESCRIPTION
+    This script deletes every Azure virtual machines in the specified DevTest Lab. It will
+    process all VMs in parallel divided into blocks.
+
+.PARAMETER ids
+    Mandatory. Resource ids for the VMs to delete.
+
+.EXAMPLE
+    Remove-AzureDtlLabVMs -ids $vms
+
+.NOTES
+
+#>
 [cmdletbinding()]
 param
 (
-    [Parameter(Mandatory=$true, HelpMessage="Resource ids for the VMs to delete")]
+    [Parameter(Mandatory = $true, HelpMessage = "Resource ids for the VMs to delete")]
     [string[]] $ids   
 )
 
-trap
-{
+trap {
     # NOTE: This trap will handle all errors. There should be no need to use a catch below in this
     #       script, unless you want to ignore a specific error.
     Handle-LastError
@@ -20,9 +36,10 @@ $deleteVmBlock = {
     try {
         $azVer = GetAzureModuleVersion
         
-        if($azVer -ge "3.8.0") {
+        if ($azVer -ge "3.8.0") {
             Save-AzureRmContext -Path $global:profilePath | Write-Verbose
-        } else {
+        }
+        else {
             Save-AzureRmProfile -Path $global:profilePath | Write-Verbose
         }
 
@@ -47,7 +64,7 @@ try {
 
     $jobs = @()
 
-    foreach ($id in $ids){        
+    foreach ($id in $ids) {        
         LogOutput "Starting job to delete $id ..."
         $jobs += Start-Job -Name $id -ScriptBlock $deleteVmBlock -ArgumentList $id, $profilePath
         LogOutput "$id deleted."
@@ -56,8 +73,8 @@ try {
     LogOutput "VM Deletion jobs have completed"
 
 } finally {
-    if($credentialsKind -eq "File") {
-        1..3 | % { [console]::beep(2500,300) } # Make a sound to indicate we're done.
+    if ($credentialsKind -eq "File") {
+        1..3 | % { [console]::beep(2500, 300) } # Make a sound to indicate we're done.
     }
     popd    
 }

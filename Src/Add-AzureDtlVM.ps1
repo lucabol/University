@@ -1,64 +1,142 @@
+<#
+.SYNOPSIS 
+    This script adds the specified number of Azure virtual machines in the specified DevTest Lab.
+
+.DESCRIPTION
+    TODO:
+
+.PARAMETER LabName
+    Mandatory. Name of Lab.
+
+.PARAMETER VMCount
+    Mandatory. Number of VMs to create with this execution.
+
+.PARAMETER ImageName
+    Mandatory. Name of base image in lab.
+
+.PARAMETER TotalLabSize
+    Mandatory. Desired total number of VMs in the lab.
+
+.PARAMETER BatchSize
+    Optional. How many VMs to create in each batch.
+    Default 30.
+
+.PARAMETER TemplatePath
+    Optional. Path to the Deployment Template File.
+    Default ".\dtl_multivm_customimage.json".
+
+.PARAMETER ShutdownPath
+    Optional. Path to the Shutdown file.
+    Default ".\dtl_shutdown.json".
+
+.PARAMETER Size
+    Optional. Size of VM image.
+    Default "Standard_A2_v2".
+
+.PARAMETER VMNameBase
+    Optional. Prefix for new VMs.
+    Default "vm".
+
+.PARAMETER VNetName
+    Optional. Virtual Network Name.
+    Default "dtl" + $LabName.
+
+.PARAMETER SubnetName
+    Optional. Subnet Name.
+    Default "dtl" + $LabName + "SubNet".
+
+.PARAMETER location
+    Optional. Location for the Machines.
+    Default "westeurope".
+
+.PARAMETER TimeZoneId
+    Optional. TimeZone for machines.
+    Default "Central European Standard Time".
+
+.PARAMETER profilePath
+    Optional. Path to file with Azure Profile.
+    Default "$env:APPDATA\AzProfile.txt".
+
+.PARAMETER DaysToExpiry
+    Optional. How many days before expiring the VMs (-1 never, 0 today, 1 tomorrow, 2 ...) Defaults to tomorrow.
+    Default "1".
+
+.PARAMETER ExpirationTime
+    Optional. What time to expire the VMs at. Defaults to 3am. In form of 'HH:mm' in TimeZoneID timezone.
+    Default "03:00".
+
+.PARAMETER ShutDownTime
+    Optional. Shutdown time for the VMs in the lab. In form of 'HH:mm' in TimeZoneID timezone.
+    Default $ExpirationTime.
+
+.EXAMPLE
+    Add-AzureDtlVM -LabName Contoso -VMCount 50 -ImageName "UnivImage" -TotalLabSize 200
+
+.EXAMPLE
+    Add-AzureDtlVM -LabName Contoso -VMCount 15 -ImageName "UnivImage" -TotalLabSize 15 -ExpirationTime "16:00" -DaysToExpiry 0
+
+.EXAMPLE
+    Add-AzureDtlVM -LabName Contoso -VMCount 15 -ImageName "UnivImage" -TotalLabSize 15 -ExpirationTime "16:00" -DaysToExpiry 0 -location "centralus" -TimeZoneId "Central Standard Time"
+
+.NOTES
+
+#>
 [cmdletbinding()]
 param 
 (
-    [Parameter(Mandatory=$true, HelpMessage="Name of Lab")]
+    [Parameter(Mandatory = $true, HelpMessage = "Name of Lab")]
     [string] $LabName,
 
-    [Parameter(Mandatory=$true, HelpMessage="Number of VMs to create with this execution")]
+    [Parameter(Mandatory = $true, HelpMessage = "Number of VMs to create with this execution")]
     [int] $VMCount,
 
-    [Parameter(Mandatory=$true, HelpMessage="Name of base image in lab")]
+    [Parameter(Mandatory = $true, HelpMessage = "Name of base image in lab")]
     [string] $ImageName,
 
-    [Parameter(Mandatory=$true, HelpMessage="Desired total number of VMs in the lab")]
+    [Parameter(Mandatory = $true, HelpMessage = "Desired total number of VMs in the lab")]
     [int] $TotalLabSize,
 
-    [Parameter(Mandatory=$false, HelpMessage="How many VMs to create in each batch")]
+    [Parameter(Mandatory = $false, HelpMessage = "How many VMs to create in each batch")]
     [int] $BatchSize = 30,
 
-    [Parameter(Mandatory=$false, HelpMessage="Path to the Deployment Template File")]
+    [Parameter(Mandatory = $false, HelpMessage = "Path to the Deployment Template File")]
     [string] $TemplatePath = ".\dtl_multivm_customimage.json",
 
-    [Parameter(Mandatory=$false, HelpMessage="Path to the Shutdown file")]
+    [Parameter(Mandatory = $false, HelpMessage = "Path to the Shutdown file")]
     [string] $ShutdownPath = ".\dtl_shutdown.json",
 
-    [Parameter(Mandatory=$false, HelpMessage="Size of VM image")]
+    [Parameter(Mandatory = $false, HelpMessage = "Size of VM image")]
     [string] $Size = "Standard_A2_v2",    
 
-    [Parameter(Mandatory=$false, HelpMessage="Prefix for new VMs")]
+    [Parameter(Mandatory = $false, HelpMessage = "Prefix for new VMs")]
     [string] $VMNameBase = "vm",
 
-    [Parameter(Mandatory=$false, HelpMessage="Virtual Network Name")]
-    [string] $VNetName = "dtl$LabName",
+    [Parameter(Mandatory = $false, HelpMessage = "Virtual Network Name")]
+    [string] $VNetName = "dtl" + $LabName,
 
-    [Parameter(Mandatory=$false, HelpMessage="SubNetName")]
+    [Parameter(Mandatory = $false, HelpMessage = "SubNetName")]
     [string] $SubnetName = "dtl" + $LabName + "SubNet",
 
-    [Parameter(Mandatory=$false, HelpMessage="Location for the Machines")]
+    [Parameter(Mandatory = $false, HelpMessage = "Location for the Machines")]
     [string] $location = "westeurope",
 
-    [Parameter(Mandatory=$false, HelpMessage="TimeZone for machines")]
+    [Parameter(Mandatory = $false, HelpMessage = "TimeZone for machines")]
     [string] $TimeZoneId = "Central European Standard Time",
 
-    # TODO: remove parameter and code using it
-    [Parameter(Mandatory=$false, HelpMessage="Fail if existing VMs in the lab")]
-    [switch] $FailIfExisting,
-
-    [Parameter(Mandatory=$false, HelpMessage="Path to file with Azure Profile")]
+    [Parameter(Mandatory = $false, HelpMessage = "Path to file with Azure Profile")]
     [string] $profilePath = "$env:APPDATA\AzProfile.txt",
 
-    [Parameter(Mandatory=$false, HelpMessage="How many days before expiring the VMs (-1 never, 0 today, 1 tomorrow, 2 .... Defaults to tomorrow.")]
+    [Parameter(Mandatory = $false, HelpMessage = "How many days before expiring the VMs (-1 never, 0 today, 1 tomorrow, 2 .... Defaults to tomorrow.")]
     [int] $DaysToExpiry = 1,
 
-    [Parameter(Mandatory=$false, HelpMessage="What time to expire the VMs at. Defaults to 3am. In form of 'HH:mm' in TimeZoneID timezone")]
+    [Parameter(Mandatory = $false, HelpMessage = "What time to expire the VMs at. Defaults to 3am. In form of 'HH:mm' in TimeZoneID timezone")]
     [string] $ExpirationTime = "03:00",
 
-    [Parameter(Mandatory=$false, HelpMessage="Shutdown time for the VMs in the lab. In form of 'HH:mm' in TimeZoneID timezone")]
+    [Parameter(Mandatory = $false, HelpMessage = "Shutdown time for the VMs in the lab. In form of 'HH:mm' in TimeZoneID timezone")]
     [string] $ShutDownTime = $ExpirationTime       
 )
 
-trap
-{
+trap {
     # NOTE: This trap will handle all errors. There should be no need to use a catch below in this
     #       script, unless you want to ignore a specific error.
     Handle-LastError
@@ -69,7 +147,7 @@ trap
 try {
     $credentialsKind = InferCredentials
 
-    if($credentialsKind -eq "Runbook") {
+    if ($credentialsKind -eq "Runbook") {
         $file = Invoke-WebRequest -Uri $TemplatePath -UseBasicParsing
         $templateContent = $file.Content
     }
@@ -78,7 +156,7 @@ try {
         $templateContent = [IO.File]::ReadAllText($path)
     }
 
-    if($BatchSize -gt 100) {
+    if ($BatchSize -gt 100) {
         throw "BatchSize must be less or equal to 100"
     }
     
@@ -99,29 +177,19 @@ try {
     LogOutput "Shutdown time: $ShutDownTime"
 
     $azVer = GetAzureModuleVersion
-    if($azVer -ge "3.8.0") {
+    if ($azVer -ge "3.8.0") {
         $SubscriptionID = (Get-AzureRmContext).Subscription.Id
-    } else {
+    }
+    else {
         $SubscriptionID = (Get-AzureRmContext).Subscription.SubscriptionId
     }
     
     LogOutput "Subscription id: $SubscriptionID"
     $ResourceGroupName = GetResourceGroupName -labname $LabName
     LogOutput "Resource Group: $ResourceGroupName"
-    
-    # TODO: delete this code when removing FailIfExisting
-    if($FailIfExiting) {
-        # Check to see if any VMs already exist in the lab. 
-        LogOutput "Checking for existing VMs in $LabName"
-        $existingVMs = (GetAllLabVMs -labName $LabName).Count
-        if ($existingVMs -ne 0) {
-            throw "Lab $LabName contains $existingVMs existing VMs. Please clean up lab before creating new VMs"
-        }
-        LogOutput "No existing VMs in $LabName"
-    }
 
     # Set the expiration date. This needs to be passed to DevTestLab in UTC time, so it is converted to UTC from TimeZoneId time
-    if($DaysToExpiry -lt 0) {
+    if ($DaysToExpiry -lt 0) {
         $DaysToExpiry = 365 * 100 # Expire in 100 years (aka never) 
     }
 
@@ -132,7 +200,7 @@ try {
     $ExpiryDateTime = $ExpiryDateTime.Add($Time)
     
     $ExpirationUtc = [system.timezoneinfo]::ConvertTimeToUtc($ExpiryDateTime, $tz)
-    if($ExpirationUtc -le [DateTime]::UtcNow) {
+    if ($ExpirationUtc -le [DateTime]::UtcNow) {
         throw "Expiration date $ShutDownDate (or in UTC $ExpirationUtc) must be in the future."
     }
     $ExpirationDate = $ExpirationUtc.ToString("yyyy-MM-ddTHH:mm:ss")
@@ -143,10 +211,10 @@ try {
 
     LogOutput "Start deployment of Shutdown time ..."
     $shutParams = @{
-            newLabName = $LabName
-            shutDownTime = $ShutDownTimeHours
-            timeZoneId = $TimeZoneId
-        }
+        newLabName   = $LabName
+        shutDownTime = $ShutDownTimeHours
+        timeZoneId   = $TimeZoneId
+    }
     New-AzureRmResourceGroupDeployment -Name $shutDeployment -ResourceGroupName $ResourceGroupName -TemplateFile $ShutdownPath -TemplateParameterObject $shutParams | Write-Verbose
     LogOutput "Shutdown time deployed."
 
@@ -162,7 +230,7 @@ try {
 
     LogOutput "Lab $LabName, Total VMS:$($vms.count), Failed:$($failedVms.count), Missing: $MissingVMs, ToCreate: $VMCount, Batches of: $BatchSize"
 
-    if($VMCount -gt 0) {
+    if ($VMCount -gt 0) {
         LogOutput "Start creating VMs ..."
         $labId = "/subscriptions/$SubscriptionId/resourcegroups/$ResourceGroupName/providers/Microsoft.DevTestLab/labs/$LabName"
         LogOutput "LabId: $labId"
@@ -176,18 +244,18 @@ try {
         LogOutput "Base Name $VMNameBase"
 
         $tokens = @{
-            Count = $BatchSize
-            ExpirationDate = $ExpirationDate
-            ImageName = "/subscriptions/$SubscriptionID/ResourceGroups/$ResourceGroupName/providers/Microsoft.DevTestLab/labs/$LabName/customImages/$ImageName"
-            LabName = $LabName
-            Location = $location
-            Name = $VMNameBase
-            ResourceGroupName = $ResourceGroupName
-            ShutDownTime = $ShutDownTimeHours
-            Size = $Size
-            SubnetName = $SubnetName
-            SubscriptionId = $SubscriptionId
-            TimeZoneId = $TimeZoneId
+            Count              = $BatchSize
+            ExpirationDate     = $ExpirationDate
+            ImageName          = "/subscriptions/$SubscriptionID/ResourceGroups/$ResourceGroupName/providers/Microsoft.DevTestLab/labs/$LabName/customImages/$ImageName"
+            LabName            = $LabName
+            Location           = $location
+            Name               = $VMNameBase
+            ResourceGroupName  = $ResourceGroupName
+            ShutDownTime       = $ShutDownTimeHours
+            Size               = $Size
+            SubnetName         = $SubnetName
+            SubscriptionId     = $SubscriptionId
+            TimeZoneId         = $TimeZoneId
             VirtualNetworkName = $VNetName
         }
 
@@ -196,7 +264,7 @@ try {
         LogOutput "VMCount: $vmcount, Loops: $loops, Rem: $rem"
 
         # Iterating loops time
-        for($i = 0; $i -lt $loops; $i++) {
+        for ($i = 0; $i -lt $loops; $i++) {
             $tokens["Name"] = $VMNameBase + $i.ToString()
             LogOutput "Processing batch: $i"
             Create-VirtualMachines -LabId $labId -Tokens $tokens -content $templateContent
@@ -204,7 +272,7 @@ try {
         }
 
         # Process reminder
-        if($rem -ne 0) {
+        if ($rem -ne 0) {
             LogOutput "Processing reminder"
             $tokens["Name"] = $VMNameBase + "Rm"
             $tokens["Count"] = $rem
@@ -220,14 +288,14 @@ try {
     [array] $failed = $vms | ? { $_.Properties.provisioningState -eq 'Failed' }
     LogOutput "Detected $($failed.Count) failed VMs"
 
-    RemoveBatchVms -vms $failed -batchSize $removeBatchSize -profilePath $profilePath -credentialsKind $credentialsKind
+    RemoveBatchVms -vms $failed -batchSize $removeBatchSize -credentialsKind $credentialsKind
     LogOutput "Deleted $($failed.Count) failed VMs"
 
     LogOutput "All done!"
 
 } finally {
-    if($credentialsKind -eq "File") {
-        1..3 | % { [console]::beep(2500,300) } # Make a sound to indicate we're done if running from command line.
+    if ($credentialsKind -eq "File") {
+        1..3 | % { [console]::beep(2500, 300) } # Make a sound to indicate we're done if running from command line.
     }
     popd
 }
