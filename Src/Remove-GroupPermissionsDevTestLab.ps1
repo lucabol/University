@@ -13,17 +13,17 @@
 
 .PARAMETER role
     Optional. The role definition name. 
-    Default "Contoso DevTest Labs User".
+    Default "University DevTest Labs User".
 
 .PARAMETER profilePath
     Optional. Path to file with Azure Profile.
     Default "$env:APPDATA\AzProfile.txt".
 
 .EXAMPLE
-    Remove-GroupPermissionsDevTestLab -labName Contoso -ADGroupName MyGroup
+    Remove-GroupPermissionsDevTestLab -labName University -ADGroupName MyGroup
 
 .EXAMPLE
-    Remove-GroupPermissionsDevTestLab -labName Contoso -ADGroupName MyGroup -role "My DevTest Lab User"
+    Remove-GroupPermissionsDevTestLab -labName University -ADGroupName MyGroup -role "My DevTest Lab User"
 
 .NOTES
 
@@ -38,7 +38,7 @@ param
     [string] $ADGroupName,
 
     [Parameter(Mandatory = $false, HelpMessage = "The role definition name")]
-    [string] $role = "Contoso DevTest Labs User",
+    [string] $role = "University DevTest Labs User",
 
     [Parameter(Mandatory = $false, HelpMessage = "Path to file with Azure Profile")]
     [string] $profilePath = "$env:APPDATA\AzProfile.txt"

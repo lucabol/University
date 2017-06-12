@@ -70,13 +70,13 @@
     Default $ExpirationTime.
 
 .EXAMPLE
-    Add-AzureDtlVM -LabName Contoso -VMCount 50 -ImageName "UnivImage" -TotalLabSize 200
+    Add-AzureDtlVM -LabName University -VMCount 50 -ImageName "UnivImage" -TotalLabSize 200
 
 .EXAMPLE
-    Add-AzureDtlVM -LabName Contoso -VMCount 15 -ImageName "UnivImage" -TotalLabSize 15 -ExpirationTime "16:00" -DaysToExpiry 0
+    Add-AzureDtlVM -LabName University -VMCount 15 -ImageName "UnivImage" -TotalLabSize 15 -ExpirationTime "16:00" -DaysToExpiry 0
 
 .EXAMPLE
-    Add-AzureDtlVM -LabName Contoso -VMCount 15 -ImageName "UnivImage" -TotalLabSize 15 -ExpirationTime "16:00" -DaysToExpiry 0 -location "centralus" -TimeZoneId "Central Standard Time"
+    Add-AzureDtlVM -LabName University -VMCount 15 -ImageName "UnivImage" -TotalLabSize 15 -ExpirationTime "16:00" -DaysToExpiry 0 -location "centralus" -TimeZoneId "Central Standard Time"
 
 .NOTES
 

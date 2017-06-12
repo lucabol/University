@@ -18,13 +18,13 @@
     Default is 10.
 
 .EXAMPLE
-    Remove-AzureDtlVM -LabName Contoso -batchSize 30
+    Remove-AzureDtlVM -LabName University -batchSize 30
 
 .EXAMPLE
-    Remove-AzureDtlVM -LabName Contoso -profilePath "c:\AzProfile.txt"
+    Remove-AzureDtlVM -LabName University -profilePath "c:\AzProfile.txt"
 
 .EXAMPLE
-    Remove-AzureDtlVM -LabName Contoso
+    Remove-AzureDtlVM -LabName University
 
 .NOTES
 

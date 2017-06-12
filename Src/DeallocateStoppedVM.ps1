@@ -13,10 +13,10 @@
     Default is "$env:APPDATA\AzProfile.txt"
 
 .EXAMPLE
-    DeallocateStoppedVM -LabName Contoso -profilePath "c:\AzProfile.txt"
+    DeallocateStoppedVM -LabName University -profilePath "c:\AzProfile.txt"
 
 .EXAMPLE
-    DeallocateStoppedVM -LabName Contoso
+    DeallocateStoppedVM -LabName University
 
 .NOTES
 

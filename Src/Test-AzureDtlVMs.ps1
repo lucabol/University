@@ -20,7 +20,7 @@
     Default 0.1
 
 .EXAMPLE
-    Test-AzureDtlLabVMs -LabName Contoso -LabSize 50
+    Test-AzureDtlLabVMs -LabName University -LabSize 50
 
 .NOTES
 

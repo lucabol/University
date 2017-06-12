@@ -48,13 +48,13 @@
     Default "$env:APPDATA\AzProfile.txt".
 
 .EXAMPLE
-    Manage-AzureDtlFixedPool -LabName Contoso -ImageName "UnivImage"
+    Manage-AzureDtlFixedPool -LabName University -ImageName "UnivImage"
 
 .EXAMPLE
-    Manage-AzureDtlFixedPool -LabName Contoso -ImageName "UnivImage" -Size "Standard_A2_v2"
+    Manage-AzureDtlFixedPool -LabName University -ImageName "UnivImage" -Size "Standard_A2_v2"
 
 .EXAMPLE
-    Manage-AzureDtlFixedPool -LabName Contoso -ImageName "UnivImage" -location "centralus" -TimeZoneId "Central Standard Time" -BatchSize 30
+    Manage-AzureDtlFixedPool -LabName University -ImageName "UnivImage" -location "centralus" -TimeZoneId "Central Standard Time" -BatchSize 30
 
 .NOTES
 
