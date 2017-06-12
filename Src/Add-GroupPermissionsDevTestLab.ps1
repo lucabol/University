@@ -1,4 +1,34 @@
-﻿[cmdletbinding()]
+﻿<#
+.SYNOPSIS 
+    This script adds the specified role to the AD Group in the specified DevTest Lab.
+
+.DESCRIPTION
+    TODO:
+
+.PARAMETER labName
+    Mandatory. The name of the lab.
+
+.PARAMETER ADGroupName
+    Mandatory. The name of the AD group.
+
+.PARAMETER role
+    Optional. The role definition name.
+    Default "Contoso DevTest Labs User".
+
+.PARAMETER profilePath
+    Optional. Path to file with Azure Profile.
+    Default "$env:APPDATA\AzProfile.txt".
+
+.EXAMPLE
+    Add-GroupPermissionsDevTestLab -labName Contoso -ADGroupName MyGroup
+
+.EXAMPLE
+    Add-GroupPermissionsDevTestLab -labName Contoso -ADGroupName MyGroup -role "My DevTest Lab User"
+
+.NOTES
+
+#>
+[cmdletbinding()]
 param 
 (
     [Parameter(Mandatory = $true, HelpMessage = "The name of the lab")]

@@ -1,3 +1,64 @@
+<#
+.SYNOPSIS 
+    This script verify that Lab have the Virtual Machine pool equals to the PoolSize specified as Azure Tag of Lab.
+
+.DESCRIPTION
+    TODO:
+
+.PARAMETER LabName
+    Mandatory. Name of Lab.
+
+.PARAMETER ImageName
+    Mandatory. Name of base image in lab.
+
+.PARAMETER BatchSize
+    Optional. How many VMs to create in each batch.
+    Default 50.
+
+.PARAMETER TemplatePath
+    Optional. Path to the Deployment Template File.
+    Default ".\dtl_multivm_customimage.json".
+
+.PARAMETER Size
+    Optional. Size of VM image.
+    Default "Standard_DS2".
+
+.PARAMETER VMNameBase
+    Optional. Prefix for new VMs.
+    Default "vm".
+
+.PARAMETER VNetName
+    Optional. Virtual Network Name.
+    Default "dtl" + $LabName.
+
+.PARAMETER SubnetName
+    Optional. Subnet Name.
+    Default "dtl" + $LabName + "SubNet".
+
+.PARAMETER location
+    Optional. Location for the Machines.
+    Default "westeurope".
+
+.PARAMETER TimeZoneId
+    Optional. TimeZone for machines.
+    Default "Central European Standard Time".
+
+.PARAMETER profilePath
+    Optional. Path to file with Azure Profile.
+    Default "$env:APPDATA\AzProfile.txt".
+
+.EXAMPLE
+    Manage-AzureDtlFixedPool -LabName Contoso -ImageName "UnivImage"
+
+.EXAMPLE
+    Manage-AzureDtlFixedPool -LabName Contoso -ImageName "UnivImage" -Size "Standard_A2_v2"
+
+.EXAMPLE
+    Manage-AzureDtlFixedPool -LabName Contoso -ImageName "UnivImage" -location "centralus" -TimeZoneId "Central Standard Time" -BatchSize 30
+
+.NOTES
+
+#>
 [cmdletbinding()]
 param 
 (
