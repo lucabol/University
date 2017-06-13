@@ -12,7 +12,8 @@ To register a new application we need to first create the  App registrations in 
 + Follow the prompts and create a new application
 + Once the app is created, grant delegated permissions to Windows Azure Active Directory (Microsoft.Azure.ActiveDirectory) and Windows Azure Service Management API in the Required permissions Settings blade 
 + Generate a valid key and copy it.
-+ Register your App URL and http://localhost:3000 in the Reply URL's section 
++ Register your App URL as the Reply URL's section 
++ Edit manifest and set "oauth2AllowImplicitFlow": true
 
 ## Placeholder replacement
 Mandatory fields:

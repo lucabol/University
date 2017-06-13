@@ -29,12 +29,12 @@ function ConnectAndStoreToken(clientId) {
     const token = window.sessionStorage.getItem('access_token');
 
     if (!token) {
-      connect();
+      connect(clientId);
     } else {
       const expiry = window.sessionStorage.getItem('token_expiry');
       var expireTime = Date.parse(expiry);
       if (Date.now > expireTime) {
-        connect();
+        connect(clientId);
       }
     }
   }
