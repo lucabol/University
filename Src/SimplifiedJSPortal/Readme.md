@@ -14,13 +14,15 @@ To register a new application we need to first create the  App registrations in 
 + Generate a valid key and copy it.
 + Register your App URL and http://localhost:3000 in the Reply URL's section 
 
-## Place holder replacement
+## Placeholder replacement
 Mandatory fields:
-    + ClientID
-    + SubscriptionID
-    + ResourcegroupName
-    + LabName
+
++ ClientID
++ SubscriptionID
++ ResourcegroupName
++ LabName
 
 Optional Fields:
-    + Success Callback
-    + Failure Callback
+
++ Success Callback
++ Failure Callback
