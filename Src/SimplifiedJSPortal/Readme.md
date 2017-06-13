@@ -4,7 +4,7 @@ The app.html is an example of code to use the Javascript functions inside a page
 Also, they require the registration of an app in the Azure AD.
 
 ## App registration
-To register a new application we need to first create the  App registrations in Azure Active directory. To know more about this please follow this [link](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-integrating-applications). We need t
+To register a new application we need to first create the  App registrations in Azure Active directory. To know more about this please follow this [link](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-integrating-applications). We need to:
 
 + Sign in to the [Azure portal](https://portal.azure.com)
 + Choose your Azure AD tenant by selecting your account in the top right corner of the page
@@ -16,11 +16,11 @@ To register a new application we need to first create the  App registrations in 
 
 ## Place holder replacement
 Mandatory fields:
-    ClientID
-    SubscriptionID
-    ResourcegroupName
-    LabName
+    + ClientID
+    + SubscriptionID
+    + ResourcegroupName
+    + LabName
 
 Optional Fields:
-    Success Callback
-    Failure Callback
+    + Success Callback
+    + Failure Callback
