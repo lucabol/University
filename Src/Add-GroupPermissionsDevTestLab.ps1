@@ -3,7 +3,7 @@
     This script adds the specified role to the AD Group in the specified DevTest Lab.
 
 .DESCRIPTION
-    TODO:
+    This script allows IT admins to give programmatically the permissions to access lab resources to a specific group using the lab role.
 
 .PARAMETER labName
     Mandatory. The name of the lab.
