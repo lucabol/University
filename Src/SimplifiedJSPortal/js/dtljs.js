@@ -1,7 +1,4 @@
-// const redirectUri = 'https://simpleportalazure.azurewebsites.net/';
-const clientId = 'dd827519-7932-42b6-a05d-1bd5bb12b27b';
 const authority = 'https://login.microsoftonline.com/common/oauth2/authorize';
-const homePage = 'http://htmldemovj.azurewebsites.net/app.html';
 const redirectUri = window.location;
 const baseUrl = 'https://management.azure.com';
 const apiVersion = '?api-version=2015-11-01';
@@ -13,7 +10,7 @@ var claimedVm;
 var timeouHandle;
 
 // Connect And Token Functions 
-function ConnectAndStoreToken() {
+function ConnectAndStoreToken(clientId) {
   if (window.location.hash) {
     var fragments = {};
     var hashSegments = window.location.hash.substr(1).split('&');
@@ -27,7 +24,7 @@ function ConnectAndStoreToken() {
     tokenExpiry.setMinutes(tokenExpiry.getMinutes() + 59);
     window.sessionStorage.setItem('token_expiry', tokenExpiry.toString());
     // Redirect back to home page
-    window.location = homePage;
+    window.location = redirectUri;
   } else {
     const token = window.sessionStorage.getItem('access_token');
 
@@ -43,49 +40,49 @@ function ConnectAndStoreToken() {
   }
 }
 
-function connect() {
+function connect(clientId) {
   const oauthUrl = `${authority}?`
-           + '&client_id=' + encodeURIComponent(clientId) 
-           + '&nonce=' + encodeURIComponent('TODO') 
-           + '&redirect_uri=' + encodeURIComponent(redirectUri) 
-           + '&resource=' + encodeURIComponent('https://management.azure.com/') 
-           + '&response_mode=' + encodeURIComponent('fragment') + '&prompt=' 
-           + encodeURIComponent('consent') 
-           + '&response_type=' 
-           + encodeURIComponent('token');
+    + '&client_id=' + encodeURIComponent(clientId)
+    + '&nonce=' + encodeURIComponent('TODO')
+    + '&redirect_uri=' + encodeURIComponent(redirectUri)
+    + '&resource=' + encodeURIComponent('https://management.azure.com/')
+    + '&response_mode=' + encodeURIComponent('fragment') + '&prompt='
+    + encodeURIComponent('consent')
+    + '&response_type='
+    + encodeURIComponent('token');
 
   window.location.assign(oauthUrl);
 }
 
 function startSpinner() {
-    var opts = {
-            lines: 13, // The number of lines to draw
-            length: 7, // The length of each line
-            width: 4, // The line thickness
-            radius: 10, // The radius of the inner circle
-            corners: 1, // Corner roundness (0..1)
-            rotate: 0, // The rotation offset
-            color: '#000', // #rgb or #rrggbb
-            speed: 1, // Rounds per second
-            trail: 60, // Afterglow percentage
-            shadow: false, // Whether to render a shadow
-            hwaccel: false, // Whether to use hardware acceleration
-            class: 'spinner', // The CSS class to assign to the spinner
-            zIndex: 2e9, // The z-index (defaults to 2000000000)
-            top: '200px', // Top position relative to parent in px
-            left: '200px' // Left position relative to parent in px
-        };
+  var opts = {
+    lines: 13, // The number of lines to draw
+    length: 7, // The length of each line
+    width: 4, // The line thickness
+    radius: 10, // The radius of the inner circle
+    corners: 1, // Corner roundness (0..1)
+    rotate: 0, // The rotation offset
+    color: '#000', // #rgb or #rrggbb
+    speed: 1, // Rounds per second
+    trail: 60, // Afterglow percentage
+    shadow: false, // Whether to render a shadow
+    hwaccel: false, // Whether to use hardware acceleration
+    class: 'spinner', // The CSS class to assign to the spinner
+    zIndex: 2e9, // The z-index (defaults to 2000000000)
+    top: '200px', // Top position relative to parent in px
+    left: '200px' // Left position relative to parent in px
+  };
 
-    var target = document.createElement('spinnerContainer');
-    target.className = 'spinner';
-    target.style = "width:100px;height:100px;";
+  var target = document.createElement('spinnerContainer');
+  target.className = 'spinner';
+  target.style = "width:100px;height:100px;";
 
-    document.body.appendChild(target);
-    spinner = new Spinner(opts).spin(target);
+  document.body.appendChild(target);
+  spinner = new Spinner(opts).spin(target);
 }
 
 function stopSpinner() {
-   if (spinner) {
+  if (spinner) {
     spinner.stop();
   }
 }
@@ -150,7 +147,7 @@ function ClaimAnyVm(subscriptionId, resourceGroupName, labName, successCallback,
 
 function pollToGetClaimedVm(attempts, labUrl, successCallback, failureCallback) {
   const url = `${labUrl}/virtualmachines?api-version=2016-05-15&$expand=Properties($expand=ComputeVm,NetworkInterface,ApplicableSchedule)&$filter=tolower(Properties/OwnerObjectId)%20eq%20tolower('${ownerObjectId}')`;
- 
+
   if (claimedVm) {
     return;
   }
@@ -170,29 +167,29 @@ function pollToGetClaimedVm(attempts, labUrl, successCallback, failureCallback) 
         successCallback('Claimed VM is ' + claimedVm.name);
       });
     }
-    setTimeout(function(){
+    setTimeout(function () {
       if (attempts > 0 && !claimedVm) {
         pollToGetClaimedVm(attempts - 1, labUrl, successCallback, failureCallback);
       } else {
         if (!claimedVm) {
           stopSpinner();
           failureCallback('Unable to get Claimed VM.');
-        } 
+        }
       }
     }, 10000);
-  }, function(response){
-    setTimeout(function(){
+  }, function (response) {
+    setTimeout(function () {
       if (attempts > 0 && !claimedVm) {
         pollToGetClaimedVm(attempts - 1, labUrl, successCallback, failureCallback);
       } else {
         if (!claimedVm) {
           stopSpinner();
           failureCallback('Unable to get Claimed VM.');
-        } 
+        }
       }
     }, 10000);
   });
-  
+
 }
 
 function pollTillVmRunning(labUrl, vmName, pollAttempts, success) {
@@ -213,20 +210,20 @@ function pollTillVmRunning(labUrl, vmName, pollAttempts, success) {
     }
     if (state === 'running') {
       success();
-    
+
     } else {
-        setTimeout(function(){
+      setTimeout(function () {
         if (pollAttempts > 0) {
           pollTillVmRunning(labUrl, vmName, pollAttempts - 1, success);
         }
       }, 10000);
     }
   }, function (response) {
-    setTimeout(function(){
-        if (pollAttempts > 0) {
-          pollTillVmRunning(labUrl, vmName, pollAttempts - 1, success);
-        }
-      }, 10000);
+    setTimeout(function () {
+      if (pollAttempts > 0) {
+        pollTillVmRunning(labUrl, vmName, pollAttempts - 1, success);
+      }
+    }, 10000);
   });
 }
 
@@ -274,7 +271,7 @@ function dataURItoBlob(dataURI) {
   }
 
   // write the ArrayBuffer to a blob, and you're done
-  const blob = new Blob([ab], {type: mimeString});
+  const blob = new Blob([ab], { type: mimeString });
   return blob;
 }
 
@@ -286,16 +283,16 @@ function getRequest(url, success, reject) {
   xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
   xhr.onload = function () {
     if (xhr.status >= 200 && xhr.status < 300) {
-        success(xhr.response);
+      success(xhr.response);
     }
     else {
-      if (typeof(failureCallback) === 'function') {
+      if (typeof (failureCallback) === 'function') {
         reject(xhr.statusText);
       }
     }
   };
   xhr.onerror = function () {
-    if (typeof(failureCallback) === 'function') {
+    if (typeof (failureCallback) === 'function') {
       reject(xhr.statusText);
     }
   };
