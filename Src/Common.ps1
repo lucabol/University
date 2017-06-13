@@ -9,6 +9,19 @@ $ProgressPreference = $VerbosePreference # Disable Progress Bar
 
 # Print nice error
 function Report-Error {
+     <#
+    .SYNOPSIS 
+        Print nice error
+
+    .DESCRIPTION
+        Print nice error
+
+    .PARAMETER error
+        Mandatory. The error message.
+
+    .NOTES
+
+    #>
     [CmdletBinding()]
     param($error)
 
@@ -19,6 +32,19 @@ function Report-Error {
 
 # Print error before exiting
 function Handle-LastError {
+    <#
+    .SYNOPSIS 
+        Print error before exiting
+
+    .DESCRIPTION
+        Print error before exiting
+
+    .NOTES
+        IMPORTANT NOTE: Throwing a terminating error (using $ErrorActionPreference = "Stop") still
+        returns exit code zero from the PowerShell script when using -File. The workaround is to
+        NOT use -File when calling this script and leverage the try-catch-finally block and return
+        a non-zero exit code from the catch block.
+    #>
     [CmdletBinding()]
     param()
 
@@ -32,7 +58,20 @@ function Handle-LastError {
 }
 
 # Common logging function
-function LogOutput {         
+function LogOutput {   
+    <#
+    .SYNOPSIS 
+        Write log to output
+
+    .DESCRIPTION
+        Write log to output
+
+    .PARAMETER msg
+        Mandatory. The message to be output in the log.
+
+    .NOTES
+
+    #>        
     [CmdletBinding()]
     param($msg)
     $timestamp = (Get-Date).ToUniversalTime()
@@ -44,6 +83,15 @@ function LogOutput {
 
 # So that we can select which API to call when they get updated
 function GetAzureModuleVersion {
+    <#
+    .SYNOPSIS 
+        Retrieve the azure module version
+
+    .DESCRIPTION
+        Retrieve the azure module version so it's possible to select which API to call
+    .NOTES
+
+    #>
     [CmdletBinding()]
     param()
     $az = (Get-Module -ListAvailable -Name Azure).Version
@@ -53,6 +101,15 @@ function GetAzureModuleVersion {
 
 # Are we running in Azure Automation?
 function InferCredentials {
+    <#
+    .SYNOPSIS 
+        Detect the current environment
+
+    .DESCRIPTION
+        Detect the current environment between Runbook and File
+    .NOTES
+
+    #>
     [CmdletBinding()]
     param()
     if ($PSPrivateMetadata.JobId) {
@@ -67,6 +124,31 @@ function InferCredentials {
 # Log in to Azure differently depending on where we are running
 # TODO: write down how to save credentials to file (look at current readme.md)
 function LoadAzureCredentials {
+    <#
+    .SYNOPSIS 
+        Log in to Azure differently depending on where the script is running
+
+    .DESCRIPTION
+        Log in to Azure differently depending on where the script is running
+
+    .PARAMETER credentialsKind
+        Mandatory. Type of credential. Accepted values are "File" or "RunBook"
+
+    .PARAMETER profilePath
+        Optional. Full path to the file containing the saved credentials.
+
+    .NOTES
+        In order to create the credential file to be used for the "File" credential kind do the following:
+
+        In 'powershell' run the following commands,
+        using the correct Subscription Id instead of XXXXX-XXXX-XXXX:
+
+        Login-AzureRmAccount
+        Set-AzureRmContext -SubscriptionId "XXXXX-XXXX-XXXX"
+        Save-AzureRMProfile -Path "$env:APPDATA\AzProfile.txt"
+
+        This saves the credentials file where the scripts look for.
+    #>
     [CmdletBinding()]
     param($credentialsKind, $profilePath)
 
@@ -119,6 +201,19 @@ function LoadAzureCredentials {
 ### DTL utility functions
 
 function GetLab {
+    <#
+    .SYNOPSIS 
+        Return the lab resource
+
+    .DESCRIPTION
+        Return the lab resource object from the lab name
+
+    .PARAMETER LabName
+        Mandatory. The name of the lab
+
+    .NOTES
+
+    #>
     [CmdletBinding()]
     param($LabName)
     $lab = Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs" -ResourceNameContains $LabName  | where ResourceName -EQ "$LabName"
@@ -127,6 +222,19 @@ function GetLab {
 }
 
 function GetAllLabVMs {
+    <#
+    .SYNOPSIS 
+        Returns all the VMs in the specified Lab
+
+    .DESCRIPTION
+        Returns all the VMs in the specified Lab
+
+    .PARAMETER LabName
+        Mandatory. The name of the lab
+
+    .NOTES
+
+    #>
     [CmdletBinding()]
     param($LabName)
     
@@ -135,6 +243,19 @@ function GetAllLabVMs {
 
 # Get the expanded props as well (but slowly)
 function GetAllLabVMsExpanded {
+    <#
+    .SYNOPSIS 
+        Returns all the VMs in the specified Lab with all the properties
+
+    .DESCRIPTION
+        Returns all the VMs in the specified Lab with all the properties
+
+    .PARAMETER LabName
+        Mandatory. The name of the lab
+
+    .NOTES
+        This function can be slow due to the number of information retrieved for each VM
+    #>
     [CmdletBinding()]
     param($LabName)
 
@@ -150,6 +271,19 @@ function GetResourceGroupName {
 
 # Get status of VM inside a DTL
 function GetDtlVmStatus {
+    <#
+    .SYNOPSIS 
+        Get status of VM inside a DTL
+
+    .DESCRIPTION
+        Get status of VM inside a DTL
+
+    .PARAMETER vm
+        Mandatory. The name of the vm
+
+    .NOTES
+
+    #>
     [CmdletBinding()]
     param($vm)
 
@@ -164,6 +298,16 @@ function GetDtlVmStatus {
 
 # Function to return the Automation account information that this job is running in.
 Function WhoAmI {
+    <#
+    .SYNOPSIS 
+        Returns the Automation account information that this job is running in
+
+    .DESCRIPTION
+        Returns the Automation account information that this job is running in
+
+    .NOTES
+
+    #>
     $AutomationResource = Find-AzureRmResource -ResourceType Microsoft.Automation/AutomationAccounts
 
     foreach ($Automation in $AutomationResource) {
@@ -184,6 +328,25 @@ Function WhoAmI {
 
 # Removes virtual machines given their names, how to batch parallelize them and credentials
 function RemoveBatchVMs {
+    <#
+    .SYNOPSIS 
+        Removes virtual machines given their names, how to batch parallelize them and credentials
+
+    .DESCRIPTION
+        Removes virtual machines given their names, how to batch parallelize them and credentials
+
+    .PARAMETER vms
+        Mandatory. The name of the VMs to be removed
+
+    .PARAMETER BatchSize
+        Mandatory. The size of the Batch of VMs
+
+    .PARAMETER credentialsKind
+        Mandatory. Type of credential. Accepted values are "File" or "RunBook"
+
+    .NOTES
+
+    #>
     [CmdletBinding()]
     param($vms, $BatchSize, $credentialsKind)
 
@@ -257,6 +420,16 @@ function RemoveBatchVMs {
 ### Creating VMs
 
 function ConvertTo-Hashtable {
+    <#
+    .SYNOPSIS 
+        Convert the Json object into an hashtable
+
+    .DESCRIPTION
+        Convert the Json object into an hashtable to be output
+
+    .NOTES
+
+    #>
     param(
         [Parameter(ValueFromPipeline)]
         [string] $Content
@@ -268,6 +441,25 @@ function ConvertTo-Hashtable {
 }
 
 function Create-ParamsJson {
+    <#
+    .SYNOPSIS 
+        Replace the tokenized values in file with content
+
+    .DESCRIPTION
+        Replace the tokenized values in JSON with content
+
+    .PARAMETER Content
+        Mandatory. Content to be replaced in the JSON
+
+    .PARAMETER Tokens
+        Mandatory. Token values to be used for replacement
+    
+    .PARAMETER Compress
+        Optional. If true \r\n will be removed
+
+    .NOTES
+
+    #>
     [CmdletBinding()]
     Param(
         [string] $Content,
@@ -287,6 +479,25 @@ function Create-ParamsJson {
 
 # Create VMs from a json description substituting TOKEN for __TOKEN__
 function Create-VirtualMachines {
+    <#
+    .SYNOPSIS 
+        Create VMs from a json description substituting TOKEN for __TOKEN__
+
+    .DESCRIPTION
+        Create VMs from a json description substituting TOKEN for __TOKEN__
+
+    .PARAMETER Content
+        Mandatory. Content to be replaced in the JSON
+
+    .PARAMETER LabId
+        Mandatory. Unique Lab identifier
+
+    .PARAMETER Tokens
+        Mandatory. Token values to be used for replacement
+
+    .NOTES
+
+    #>
     [CmdletBinding()]
     Param(
         [string] $content,
@@ -308,6 +519,19 @@ function Create-VirtualMachines {
 }
 
 function Extract-Tokens {
+    <#
+    .SYNOPSIS 
+        Search content for TOKEN in format __TOKEN__
+
+    .DESCRIPTION
+        Search content for TOKEN in format __TOKEN__
+
+    .PARAMETER Content
+        Mandatory. Content to be used for token extractions
+
+    .NOTES
+
+    #>
     [CmdletBinding()]
     Param(
         [string] $Content
@@ -318,6 +542,22 @@ function Extract-Tokens {
 
 # Substitute tokens in json
 function Replace-Tokens {
+    <#
+    .SYNOPSIS 
+        Replace the tokenized values in the content
+
+    .DESCRIPTION
+        Replace the tokenized values in the content
+
+    .PARAMETER Content
+        Mandatory. Content to be replaced in the JSON
+
+    .PARAMETER Tokens
+        Mandatory. Token values to be used for replacement
+
+    .NOTES
+
+    #>
     [CmdletBinding()]
     Param(
         [string] $Content,
