@@ -3,7 +3,7 @@
     This script removes the specified role to the AD Group in the specified DevTest Lab.
 
 .DESCRIPTION
-    TODO:
+    This script allows IT admins to remove programmatically the permissions to access lab resources to a specific group associated to a specific role.
 
 .PARAMETER labName
     Mandatory. The name of the lab.

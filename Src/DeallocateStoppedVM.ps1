@@ -43,9 +43,6 @@ LoadAzureCredentials -credentialsKind $credentialsKind -profilePath $profilePath
 
 #we have to find the RG of the compute VM, which is different from the RG of the lab and the labVM
 
-#get the RG of the lab
-$ResourceGroupName = GetResourceGroupName -LabName $LabName #TODO: Maybe this row can be deleted because $ResourceGroupName is never used.
-
 #get the expanded properties of the VMs
 $labVMs = GetAllLabVMsExpanded -LabName $LabName
 

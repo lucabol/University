@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS 
-    This script verify that Lab have the Virtual Machine pool equals to the PoolSize specified as Azure Tag of Lab.
+    This script verifies whether the Virtual Machine pool of the Lab equals to the PoolSize specified as Azure Tag of Lab.
 
 .DESCRIPTION
-    TODO:
+    This script guaratees the presence of an appropriate number of Virtual machines inside the Lab depending on the number you can find inside an Azure Tag, PoolSize.
 
 .PARAMETER LabName
     Mandatory. Name of Lab.

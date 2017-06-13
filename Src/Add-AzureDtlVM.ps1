@@ -3,7 +3,7 @@
     This script adds the specified number of Azure virtual machines in the specified DevTest Lab.
 
 .DESCRIPTION
-    TODO:
+    It allows the creation of the VMs inside a specific lab. This script needs to be scheduled for the creation of the VMs of each lab. 
 
 .PARAMETER LabName
     Mandatory. Name of Lab.

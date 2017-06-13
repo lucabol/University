@@ -4,7 +4,9 @@
     Read some parameters from AutomationVariable.
 
 .DESCRIPTION
-    TODO:
+    It allows the creation of the VMs inside a specific lab. This script needs to be scheduled for the creation of the VMs of each lab. 
+    Since this script uses some additional configuration parameters which don’t change for each scenario, you can avoid setting them. 
+    Such parameters are set as “variables” in the Azure Automation account and they are loaded into the script when it is run as runbook. 
 
 .PARAMETER LabName
     Mandatory. Name of Lab.
