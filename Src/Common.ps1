@@ -9,7 +9,7 @@ $ProgressPreference = $VerbosePreference # Disable Progress Bar
 
 # Print nice error
 function Report-Error {
-     <#
+    <#
     .SYNOPSIS 
         Print nice error
 
@@ -382,7 +382,9 @@ function RemoveBatchVMs {
         foreach ($VM in $vms) {   
             # Start automation runbook to process VMs in parallel
             $RunbookNameParams = @{}
-            $RunbookNameParams.Add("Ids", $VM)
+            $batch = @();
+            $batch += $VM.ResourceId
+            $RunbookNameParams.Add("Ids", $batch)
             # Loop here until a job was successfully submitted. Will stay in the loop until job has been submitted or an exception other than max allowed jobs is reached
             while ($true) {
                 try {
