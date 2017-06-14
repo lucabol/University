@@ -1,11 +1,11 @@
-1. Doc for class scenario (step by step installation)
-2. Doc for self-service scenario (step by step installation)
-2.1 Doc how to run the Test script and get email if failed
-3. Document each script in the standard PS documentation format
-4. Rewrite Delete VM multi-thread code
-5. Remove all mentions to Bocconi in the code
-6. Describe how to set a custom role for DTL using json in the repo
-7. Describe how to use the JS function
+1. Doc for class scenario (step by step installation)   DONE
+2. Doc for self-service scenario (step by step installation)    DONE
+2.1 Doc how to run the Test script and get email if failed  DONE
+3. Document each script in the standard PS documentation format DONE
+4. Rewrite Delete VM multi-thread code  DONE
+5. Remove all mentions to Bocconi in the code   DONE
+6. Describe how to set a custom role for DTL using json in the repo DONE
+7. Describe how to use the JS function  DONE
 
 Luca
 1. Add contributors Camilla and Andrea Maia
