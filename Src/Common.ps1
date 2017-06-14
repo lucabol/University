@@ -122,7 +122,6 @@ function InferCredentials {
 }
 
 # Log in to Azure differently depending on where we are running
-# TODO: write down how to save credentials to file (look at current readme.md)
 function LoadAzureCredentials {
     <#
     .SYNOPSIS 

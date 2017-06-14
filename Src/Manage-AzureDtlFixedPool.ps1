@@ -94,6 +94,7 @@ param
 
     [Parameter(Mandatory = $false, HelpMessage = "Path to file with Azure Profile")]
     [string] $profilePath = "$env:APPDATA\AzProfile.txt"
+
 )
 
 trap {
@@ -101,8 +102,6 @@ trap {
     #       script, unless you want to ignore a specific error.
     Handle-LastError
 }
-
-# TODO: check that it works, even tried out just a few times
 
 . .\Common.ps1
 
@@ -152,10 +151,25 @@ try {
 
     # Get size of the managed pool
     $Lab = GetLab -LabName $LabName
-    $poolSize = $Lab.Tags.PoolSize
+    $poolSize = $null
+    # Hack for runbook
+    if ($credentialsKind -eq "Runbook") {
+        LogOutput "In runbook"
+        foreach ($tag in $Lab.Tags) {
+            if ($tag.ContainsValue("PoolSize")) {
+                $poolSize = $tag.Get_Item("Value")
+                break
+            }
+        }
+    }
+    else {
+        $poolSize = $Lab.Tags.PoolSize
+    }
     if (! $poolSize) {
         throw "The lab $LabName doesn't contain a PoolSize tag"
     }
+
+    LogOutput "Pool size: $poolSize"
 
     [array] $vms = GetAllLabVMsExpanded -LabName $LabName
     [array] $failedVms = $vms | ? { $_.Properties.provisioningState -eq 'Failed' }
@@ -166,7 +180,9 @@ try {
 
     LogOutput "Lab $LabName, Total VMS:$($vms.count), Failed:$($failedVms.count), Claimed:$($claimedVms.count), PoolSize: $poolSize, ToCreate: $vmToCreate"
 
-    # Never expire (TODO: change template not to have expiry date)
+    # Never expire 
+    # TODO: change template not to have expiry date
+    # REPLY TO TODO: Currently, we cannot delete $ExpirationDate from dtl_multivm_customimage.json because it's used from all other scripts that require this field.
     $ExpirationDate = Get-date "3000-01-01"
 
     # Create VMs to refill the pool
