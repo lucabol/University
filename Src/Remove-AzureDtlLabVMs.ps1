@@ -19,7 +19,10 @@
 param
 (
     [Parameter(Mandatory = $true, HelpMessage = "Resource ids for the VMs to delete")]
-    [string[]] $ids   
+    [string[]] $ids,
+    
+    [Parameter(Mandatory = $false, HelpMessage = "Path to file with Azure Profile")]
+    [string] $profilePath = "$env:APPDATA\AzProfile.txt"
 )
 
 trap {
@@ -30,8 +33,17 @@ trap {
 
 . .\Common.ps1
 
-$deleteVmBlock = {
-    param($id, $profilePath)
+function DeleteSingleVM() {
+    
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true, HelpMessage = "Resource id for the VM to delete")]
+        [string] $id, 
+        
+        [Parameter(Mandatory = $false, HelpMessage = "Path to file with Azure Profile")]
+        [string] $profilePath = "$env:APPDATA\AzProfile.txt"
+    )
 
     try {
         $azVer = GetAzureModuleVersion
@@ -53,6 +65,12 @@ $deleteVmBlock = {
     }
 }
 
+$deleteVmBlock = {
+    param($id, $profilePath)
+
+    DeleteSingleVM -id $id -profilePath $profilePath
+}
+
 try {
 
     LogOutput "Start Removal"
@@ -64,12 +82,19 @@ try {
 
     $jobs = @()
 
-    foreach ($id in $ids) {        
-        LogOutput "Starting job to delete $id ..."
-        $jobs += Start-Job -Name $id -ScriptBlock $deleteVmBlock -ArgumentList $id, $profilePath
-        LogOutput "$id deleted."
+    foreach ($id in $ids) {
+        if ($credentialsKind -eq "File") { 
+            LogOutput "Starting job to delete $id ..."
+            $jobs += Start-Job -Name $id -ScriptBlock $deleteVmBlock -ArgumentList $id, $profilePath
+            LogOutput "$id deleted."
+        }
+        else {
+            DeleteSingleVM -id $id -profilePath $profilePath
+        }
     }
-    Wait-Job -Job $jobs | Write-Verbose
+    if ($credentialsKind -eq "File") {
+        Wait-Job -Job $jobs | Write-Verbose
+    }
     LogOutput "VM Deletion jobs have completed"
 
 } finally {
