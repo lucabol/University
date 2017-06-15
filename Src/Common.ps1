@@ -9,6 +9,19 @@ $ProgressPreference = $VerbosePreference # Disable Progress Bar
 
 # Print nice error
 function Report-Error {
+    <#
+    .SYNOPSIS 
+        Print nice error
+
+    .DESCRIPTION
+        Print nice error
+
+    .PARAMETER error
+        Mandatory. The error message.
+
+    .NOTES
+
+    #>
     [CmdletBinding()]
     param($error)
 
@@ -18,8 +31,20 @@ function Report-Error {
 }
 
 # Print error before exiting
-function Handle-LastError
-{
+function Handle-LastError {
+    <#
+    .SYNOPSIS 
+        Print error before exiting
+
+    .DESCRIPTION
+        Print error before exiting
+
+    .NOTES
+        IMPORTANT NOTE: Throwing a terminating error (using $ErrorActionPreference = "Stop") still
+        returns exit code zero from the PowerShell script when using -File. The workaround is to
+        NOT use -File when calling this script and leverage the try-catch-finally block and return
+        a non-zero exit code from the catch block.
+    #>
     [CmdletBinding()]
     param()
 
@@ -33,7 +58,20 @@ function Handle-LastError
 }
 
 # Common logging function
-function LogOutput {         
+function LogOutput {   
+    <#
+    .SYNOPSIS 
+        Write log to output
+
+    .DESCRIPTION
+        Write log to output
+
+    .PARAMETER msg
+        Mandatory. The message to be output in the log.
+
+    .NOTES
+
+    #>        
     [CmdletBinding()]
     param($msg)
     $timestamp = (Get-Date).ToUniversalTime()
@@ -45,6 +83,15 @@ function LogOutput {
 
 # So that we can select which API to call when they get updated
 function GetAzureModuleVersion {
+    <#
+    .SYNOPSIS 
+        Retrieve the azure module version
+
+    .DESCRIPTION
+        Retrieve the azure module version so it's possible to select which API to call
+    .NOTES
+
+    #>
     [CmdletBinding()]
     param()
     $az = (Get-Module -ListAvailable -Name Azure).Version
@@ -54,9 +101,18 @@ function GetAzureModuleVersion {
 
 # Are we running in Azure Automation?
 function InferCredentials {
+    <#
+    .SYNOPSIS 
+        Detect the current environment
+
+    .DESCRIPTION
+        Detect the current environment between Runbook and File
+    .NOTES
+
+    #>
     [CmdletBinding()]
     param()
-    if($PSPrivateMetadata.JobId) {
+    if ($PSPrivateMetadata.JobId) {
         return "Runbook"
     }
     else {
@@ -66,30 +122,56 @@ function InferCredentials {
 }
 
 # Log in to Azure differently depending on where we are running
-# TODO: write down how to save credentials to file (look at current readme.md)
 function LoadAzureCredentials {
+    <#
+    .SYNOPSIS 
+        Log in to Azure differently depending on where the script is running
+
+    .DESCRIPTION
+        Log in to Azure differently depending on where the script is running
+
+    .PARAMETER credentialsKind
+        Mandatory. Type of credential. Accepted values are "File" or "RunBook"
+
+    .PARAMETER profilePath
+        Optional. Full path to the file containing the saved credentials.
+
+    .NOTES
+        In order to create the credential file to be used for the "File" credential kind do the following:
+
+        In 'powershell' run the following commands,
+        using the correct Subscription Id instead of XXXXX-XXXX-XXXX:
+
+        Login-AzureRmAccount
+        Set-AzureRmContext -SubscriptionId "XXXXX-XXXX-XXXX"
+        Save-AzureRMProfile -Path "$env:APPDATA\AzProfile.txt"
+
+        This saves the credentials file where the scripts look for.
+    #>
     [CmdletBinding()]
     param($credentialsKind, $profilePath)
 
     Write-Verbose "Credentials Kind: $credentialsKind"
     Write-Verbose "Credentials File: $profilePath"
 
-    if(($credentialsKind -ne "File") -and ($credentialsKind -ne "RunBook")) {
+    if (($credentialsKind -ne "File") -and ($credentialsKind -ne "RunBook")) {
         throw "CredentialsKind must be either 'File' or 'RunBook'. It was $credentialsKind instead"
     }
 
     $azVer = GetAzureModuleVersion
 
-    if($credentialsKind -eq "File") {
+    if ($credentialsKind -eq "File") {
         if (! (Test-Path $profilePath)) {
             throw "Profile file(s) not found at $profilePath. Exiting script..."    
         }
-        if($azVer -ge "3.8.0") {
+        if ($azVer -ge "3.8.0") {
             Import-AzureRmContext -Path $profilePath | Out-Null
-        } else {
+        }
+        else {
             Select-AzureRmProfile -Path $profilePath | Out-Null
         }
-    } else {
+    }
+    else {
         $connectionName = "AzureRunAsConnection"
 
         $servicePrincipalConnection = Get-AutomationConnection -Name $connectionName         
@@ -106,9 +188,10 @@ function LoadAzureCredentials {
         # Save profile so it can be used later
         # TODO: consider cleaning it up so that it is a bit more encapsulated
         $global:profilePath = (Join-Path $env:TEMP  (New-guid).Guid)
-        if($azVer -ge "3.8.0") {
+        if ($azVer -ge "3.8.0") {
             Save-AzureRmContext -Path $global:profilePath | Write-Verbose
-        } else {
+        }
+        else {
             Save-AzureRmProfile -Path $global:profilePath | Write-Verbose
         }
     } 
@@ -117,6 +200,19 @@ function LoadAzureCredentials {
 ### DTL utility functions
 
 function GetLab {
+    <#
+    .SYNOPSIS 
+        Return the lab resource
+
+    .DESCRIPTION
+        Return the lab resource object from the lab name
+
+    .PARAMETER LabName
+        Mandatory. The name of the lab
+
+    .NOTES
+
+    #>
     [CmdletBinding()]
     param($LabName)
     $lab = Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/labs" -ResourceNameContains $LabName  | where ResourceName -EQ "$LabName"
@@ -125,6 +221,19 @@ function GetLab {
 }
 
 function GetAllLabVMs {
+    <#
+    .SYNOPSIS 
+        Returns all the VMs in the specified Lab
+
+    .DESCRIPTION
+        Returns all the VMs in the specified Lab
+
+    .PARAMETER LabName
+        Mandatory. The name of the lab
+
+    .NOTES
+
+    #>
     [CmdletBinding()]
     param($LabName)
     
@@ -133,6 +242,19 @@ function GetAllLabVMs {
 
 # Get the expanded props as well (but slowly)
 function GetAllLabVMsExpanded {
+    <#
+    .SYNOPSIS 
+        Returns all the VMs in the specified Lab with all the properties
+
+    .DESCRIPTION
+        Returns all the VMs in the specified Lab with all the properties
+
+    .PARAMETER LabName
+        Mandatory. The name of the lab
+
+    .NOTES
+        This function can be slow due to the number of information retrieved for each VM
+    #>
     [CmdletBinding()]
     param($LabName)
 
@@ -148,6 +270,19 @@ function GetResourceGroupName {
 
 # Get status of VM inside a DTL
 function GetDtlVmStatus {
+    <#
+    .SYNOPSIS 
+        Get status of VM inside a DTL
+
+    .DESCRIPTION
+        Get status of VM inside a DTL
+
+    .PARAMETER vm
+        Mandatory. The name of the vm
+
+    .NOTES
+
+    #>
     [CmdletBinding()]
     param($vm)
 
@@ -161,22 +296,29 @@ function GetDtlVmStatus {
 #### Removing VMs
 
 # Function to return the Automation account information that this job is running in.
-Function WhoAmI
-{
+Function WhoAmI {
+    <#
+    .SYNOPSIS 
+        Returns the Automation account information that this job is running in
+
+    .DESCRIPTION
+        Returns the Automation account information that this job is running in
+
+    .NOTES
+
+    #>
     $AutomationResource = Find-AzureRmResource -ResourceType Microsoft.Automation/AutomationAccounts
 
-    foreach ($Automation in $AutomationResource)
-    {
+    foreach ($Automation in $AutomationResource) {
         $Job = Get-AzureRmAutomationJob -ResourceGroupName $Automation.ResourceGroupName -AutomationAccountName $Automation.Name -Id $PSPrivateMetadata.JobId.Guid -ErrorAction SilentlyContinue
-        if (!([string]::IsNullOrEmpty($Job)))
-        {
+        if (!([string]::IsNullOrEmpty($Job))) {
             $AutomationInformation = @{}
-            $AutomationInformation.Add("SubscriptionId",$Automation.SubscriptionId)
-            $AutomationInformation.Add("Location",$Automation.Location)
-            $AutomationInformation.Add("ResourceGroupName",$Job.ResourceGroupName)
-            $AutomationInformation.Add("AutomationAccountName",$Job.AutomationAccountName)
-            $AutomationInformation.Add("RunbookName",$Job.RunbookName)
-            $AutomationInformation.Add("JobId",$Job.JobId.Guid)
+            $AutomationInformation.Add("SubscriptionId", $Automation.SubscriptionId)
+            $AutomationInformation.Add("Location", $Automation.Location)
+            $AutomationInformation.Add("ResourceGroupName", $Job.ResourceGroupName)
+            $AutomationInformation.Add("AutomationAccountName", $Job.AutomationAccountName)
+            $AutomationInformation.Add("RunbookName", $Job.RunbookName)
+            $AutomationInformation.Add("JobId", $Job.JobId.Guid)
             $AutomationInformation
             break;
         }
@@ -184,45 +326,111 @@ Function WhoAmI
 }
 
 # Removes virtual machines given their names, how to batch parallelize them and credentials
-# TODO: integrate automation creation runbook code instead of PS parallelization (Luca send sample code)
 function RemoveBatchVMs {
+    <#
+    .SYNOPSIS 
+        Removes virtual machines given their names, how to batch parallelize them and credentials
+
+    .DESCRIPTION
+        Removes virtual machines given their names, how to batch parallelize them and credentials
+
+    .PARAMETER vms
+        Mandatory. The name of the VMs to be removed
+
+    .PARAMETER BatchSize
+        Mandatory. The size of the Batch of VMs
+
+    .PARAMETER credentialsKind
+        Mandatory. Type of credential. Accepted values are "File" or "RunBook"
+
+    .NOTES
+
+    #>
     [CmdletBinding()]
-    param($vms,$BatchSize, $credentialsKind, $profilePath)
+    param($vms, $BatchSize, $credentialsKind)
 
-    LogOutput "Removing VMs: $vm"
-    $batch = @(); $i = 0;
+    LogOutput "Removing VMs: $vms"
 
-    $vms | % {
-        $batch += $_.ResourceId
-        $i++
-        if ($batch.Count -eq $BatchSize -or $vms.Count -eq $i)
-        {
-            if($credentialsKind -eq "File") {
+    if ($credentialsKind -eq "File") {
+        $batch = @(); $i = 0;
+
+        $vms | % {
+            $batch += $_.ResourceId
+            $i++
+            if ($batch.Count -eq $BatchSize -or $vms.Count -eq $i) {
                 LogOutput "We are in the File path"
                 . .\Remove-AzureDtlLabVMs -Ids $batch
-            } else {
-                LogOutput "We are in the Runbook path"
-                # Get Account information on where this job is running from
-                $AccountInfo = WhoAmI
-                $RunbookName = "Remove-AzureDtlLabVMs"
 
-                $RunbookNameParams = @{}
-                $RunbookNameParams.Add("Ids",$batch)
-                Start-AzureRmAutomationRunbook -ResourceGroupName $AccountInfo.ResourceGroupName -AutomationAccountName $AccountInfo.AutomationAccountName -Name $RunbookName -Parameters $RunbookNameParams | Out-Null
+                if ($vms.Count -gt $i) {
+                    LogOutput "Waiting between batches to avoid executing too many things in parallel"
+                    Start-sleep -Seconds 240
+                }
+                $batch = @()
             }
-            if($vms.Count -gt $i) {
-                LogOutput "Waiting between batches to avoid executing too many things in parallel"
-                Start-sleep -Seconds 240
-            }
-            $batch = @()
         }
-    }    
+    }
+    else {
+        LogOutput "We are in the Runbook path"
+        # Get Account information on where this job is running from
+        $AccountInfo = WhoAmI
+        $RunbookName = "Remove-AzureDtlLabVMs"
+
+        # Process the list of VMs using the automation service and collect jobs used
+        $Jobs = @()      
+                                    
+        foreach ($VM in $vms) {   
+            # Start automation runbook to process VMs in parallel
+            $RunbookNameParams = @{}
+            $batch = @();
+            $batch += $VM.ResourceId
+            $RunbookNameParams.Add("Ids", $batch)
+            # Loop here until a job was successfully submitted. Will stay in the loop until job has been submitted or an exception other than max allowed jobs is reached
+            while ($true) {
+                try {
+                    $Job = Start-AzureRmAutomationRunbook -ResourceGroupName $AccountInfo.ResourceGroupName -AutomationAccountName $AccountInfo.AutomationAccountName -Name $RunbookName -Parameters $RunbookNameParams -ErrorAction Stop
+                    $Jobs += $Job
+                    # Submitted job successfully, exiting while loop
+                    break
+                }
+                catch {
+                    # If we have reached the max allowed jobs, sleep backoff seconds and try again inside the while loop
+                    if ($_.Exception.Message -match "conflict") {
+                        Write-Verbose ("Sleeping for 30 seconds as max allowed jobs has been reached. Will try again afterwards")
+                        Start-Sleep 30
+                    }
+                    else {
+                        throw $_
+                    }
+                }
+            }
+        }
+                
+        # Wait for jobs to complete, fail, or suspend (final states allowed for a runbook)
+        $JobsResults = @()
+        foreach ($RunningJob in $Jobs) {
+            $ActiveJob = Get-AzureRMAutomationJob -ResourceGroupName $AccountInfo.ResourceGroupName -AutomationAccountName $AccountInfo.AutomationAccountName -Id $RunningJob.JobId
+            While ($ActiveJob.Status -ne "Completed" -and $ActiveJob.Status -ne "Failed" -and $ActiveJob.Status -ne "Suspended") {
+                Start-Sleep 30
+                $ActiveJob = Get-AzureRMAutomationJob -ResourceGroupName $AccountInfo.ResourceGroupName -AutomationAccountName $AccountInfo.AutomationAccountName -Id $RunningJob.JobId
+            }
+            $JobsResults += $ActiveJob
+        }
+    }
 }
 
 ### Creating VMs
 
-function ConvertTo-Hashtable
-{
+function ConvertTo-Hashtable {
+    <#
+    .SYNOPSIS 
+        Convert the Json object into an hashtable
+
+    .DESCRIPTION
+        Convert the Json object into an hashtable to be output
+
+    .NOTES
+
+    #>
     param(
         [Parameter(ValueFromPipeline)]
         [string] $Content
@@ -233,8 +441,26 @@ function ConvertTo-Hashtable
     Write-Output -NoEnumerate $parser.DeserializeObject($Content)
 }
 
-function Create-ParamsJson
-{
+function Create-ParamsJson {
+    <#
+    .SYNOPSIS 
+        Replace the tokenized values in file with content
+
+    .DESCRIPTION
+        Replace the tokenized values in JSON with content
+
+    .PARAMETER Content
+        Mandatory. Content to be replaced in the JSON
+
+    .PARAMETER Tokens
+        Mandatory. Token values to be used for replacement
+    
+    .PARAMETER Compress
+        Optional. If true \r\n will be removed
+
+    .NOTES
+
+    #>
     [CmdletBinding()]
     Param(
         [string] $Content,
@@ -244,19 +470,35 @@ function Create-ParamsJson
 
     $replacedContent = (Replace-Tokens -Content $Content -Tokens $Tokens)
     
-    if ($Compress)
-    {
+    if ($Compress) {
         return (($replacedContent.Split("`r`n").Trim()) -join '').Replace(': ', ':')
     }
-    else
-    {
+    else {
         return $replacedContent
     }
 }
 
 # Create VMs from a json description substituting TOKEN for __TOKEN__
-function Create-VirtualMachines
-{
+function Create-VirtualMachines {
+    <#
+    .SYNOPSIS 
+        Create VMs from a json description substituting TOKEN for __TOKEN__
+
+    .DESCRIPTION
+        Create VMs from a json description substituting TOKEN for __TOKEN__
+
+    .PARAMETER Content
+        Mandatory. Content to be replaced in the JSON
+
+    .PARAMETER LabId
+        Mandatory. Unique Lab identifier
+
+    .PARAMETER Tokens
+        Mandatory. Token values to be used for replacement
+
+    .NOTES
+
+    #>
     [CmdletBinding()]
     Param(
         [string] $content,
@@ -272,13 +514,25 @@ function Create-VirtualMachines
 
         Invoke-AzureRmResourceAction -ResourceId "$LabId" -Action CreateEnvironment -Parameters $parameters -Force  | Out-Null
     } catch {
-            Report-Error $_        
+        Report-Error $_        
     }
 
 }
 
-function Extract-Tokens
-{
+function Extract-Tokens {
+    <#
+    .SYNOPSIS 
+        Search content for TOKEN in format __TOKEN__
+
+    .DESCRIPTION
+        Search content for TOKEN in format __TOKEN__
+
+    .PARAMETER Content
+        Mandatory. Content to be used for token extractions
+
+    .NOTES
+
+    #>
     [CmdletBinding()]
     Param(
         [string] $Content
@@ -288,8 +542,23 @@ function Extract-Tokens
 }
 
 # Substitute tokens in json
-function Replace-Tokens
-{
+function Replace-Tokens {
+    <#
+    .SYNOPSIS 
+        Replace the tokenized values in the content
+
+    .DESCRIPTION
+        Replace the tokenized values in the content
+
+    .PARAMETER Content
+        Mandatory. Content to be replaced in the JSON
+
+    .PARAMETER Tokens
+        Mandatory. Token values to be used for replacement
+
+    .NOTES
+
+    #>
     [CmdletBinding()]
     Param(
         [string] $Content,
