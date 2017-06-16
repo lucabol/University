@@ -343,11 +343,15 @@ function RemoveBatchVMs {
     .PARAMETER credentialsKind
         Mandatory. Type of credential. Accepted values are "File" or "RunBook"
 
+    .PARAMETER profilePath
+        Optional. Path to file with Azure Profile.
+        Default "$env:APPDATA\AzProfile.txt".
+
     .NOTES
 
     #>
     [CmdletBinding()]
-    param($vms, $BatchSize, $credentialsKind)
+    param($vms, $BatchSize, $credentialsKind, $profilePath)
 
     LogOutput "Removing VMs: $vms"
 

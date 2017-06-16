@@ -6,7 +6,7 @@
     Given LabName and LabSize, this script verifies how many Azure virtual machines are inside the DevTest Lab and throws an error inside the logs when the number is greater or lower than size +/- VMDelta. 
 
 .PARAMETER LabName
-    Mandatory. The name of the Dev Test Lab to clean up.
+    Mandatory. The name of the Dev Test Lab to run the test on.
 
 .PARAMETER LabSize
     Mandatory. Number of VMs that should be in the lab.

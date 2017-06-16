@@ -1,9 +1,9 @@
 ﻿ <#
     .SYNOPSIS
-        This script checks VM Status
+        This script shutdowns the machine if the user hasn't been active.
 
     .DESCRIPTION
-        This script verifies if: the user is active, CPU and disk usage.
+        This script verifies if: the user is active, CPU and disk usage and shutsdown the machine if the user is no longer active.
 
     .PARAMETER MaxIdleTime
         Max allowed idle (in minutes)

@@ -9,6 +9,10 @@
 .PARAMETER ids
     Mandatory. Resource ids for the VMs to delete.
 
+.PARAMETER profilePath
+    Optional. Path to file with Azure Profile.
+    Default "$env:APPDATA\AzProfile.txt".
+
 .EXAMPLE
     Remove-AzureDtlLabVMs -ids $vms
 
