@@ -35,7 +35,7 @@ param
     [string] $profilePath = "$env:APPDATA\AzProfile.txt",
 
     [Parameter(Mandatory = $true, HelpMessage = "Number of VMs that should be in the lab")]
-    [string] $LabSize,
+    [int] $LabSize,
 
     [Parameter(Mandatory = $false, HelpMessage = "Percentage of error in number of VMs (i.e. 0.1 means the lab can contain 10% more or less VMs)")]
     [double] $VMDelta = 0.1    
