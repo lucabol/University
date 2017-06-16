@@ -247,7 +247,7 @@ try {
 
     LogOutput "Failed:$($failedVms.Count), Stopped: $($stoppedVms.Count), ToDelete: $($toDelete.Count)"
 
-    RemoveBatchVms -vms $toDelete -batchSize $batchSize -credentialsKind $credentialsKind -profilePath $profilePath
+    RemoveBatchVms -vms $toDelete -batchSize $batchSize -credentialsKind $credentialsKind 
     LogOutput "Deleted $($toDelete.Count) VMs"
 
     LogOutput "All done!"

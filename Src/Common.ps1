@@ -362,7 +362,7 @@ function RemoveBatchVMs {
             $i++
             if ($batch.Count -eq $BatchSize -or $vms.Count -eq $i) {
                 LogOutput "We are in the File path"
-                . .\Remove-AzureDtlLabVMs -Ids $batch -profilePath $profilePath
+                . .\Remove-AzureDtlLabVMs -Ids $batch 
 
                 if ($vms.Count -gt $i) {
                     LogOutput "Waiting between batches to avoid executing too many things in parallel"
@@ -387,7 +387,6 @@ function RemoveBatchVMs {
             $batch = @();
             $batch += $VM.ResourceId
             $RunbookNameParams.Add("Ids", $batch)
-            $RunbookNameParms.Add("profilePath", $profilePath)
             # Loop here until a job was successfully submitted. Will stay in the loop until job has been submitted or an exception other than max allowed jobs is reached
             while ($true) {
                 try {

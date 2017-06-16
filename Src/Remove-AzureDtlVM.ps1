@@ -66,7 +66,7 @@ try {
 
     [array] $allVms = GetAllLabVMs -labname $LabName
 
-    RemoveBatchVms -vms $allVms -batchSize $batchSize -credentialsKind $credentialsKind -profilePath $profilePath
+    RemoveBatchVms -vms $allVms -batchSize $batchSize -credentialsKind $credentialsKind 
 
     LogOutput "Deleted $($allVms.Count) VMs"
     LogOutput "All Done"

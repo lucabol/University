@@ -291,7 +291,7 @@ try {
     [array] $failed = $vms | ? { $_.Properties.provisioningState -eq 'Failed' }
     LogOutput "Detected $($failed.Count) failed VMs"
 
-    RemoveBatchVms -vms $failed -batchSize $removeBatchSize -credentialsKind $credentialsKind -profilePath $profilePath
+    RemoveBatchVms -vms $failed -batchSize $removeBatchSize -credentialsKind $credentialsKind 
     LogOutput "Deleted $($failed.Count) failed VMs"
 
     LogOutput "All done!"
