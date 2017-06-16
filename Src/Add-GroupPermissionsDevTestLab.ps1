@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS 
-    This script adds the role to the AD Group in the DevTest Lab.
+    This script adds the specified role to the AD Group in the DevTest Lab.
 
 .DESCRIPTION
     This script allows IT admins to give programmatically the permissions to access lab resources to a specific group using the lab role.

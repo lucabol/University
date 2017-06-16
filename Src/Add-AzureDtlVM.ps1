@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS 
-    This script adds the number of Azure virtual machines in the DevTest Lab.
+    This script adds the specified number of Azure virtual machines to a DevTest Lab.
 
 .DESCRIPTION
     It allows the creation of the VMs inside a specific lab. This script can be run either from command line or Azure Automation for the creation of the VMs of each lab. 
