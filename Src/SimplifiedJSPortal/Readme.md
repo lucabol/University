@@ -18,12 +18,12 @@ To register a new application we need to first create the  App registrations in 
 ## Placeholder replacement
 Mandatory fields:
 
-+ ClientID
-+ SubscriptionID
-+ ResourcegroupName
-+ LabName
++ ClientID, application ID provided when you register your app on Azure AD
++ SubscriptionID, ID of the subscription where you ha deployed the resourrces
++ ResourcegroupName, resource group name of the lab
++ LabName, name of the lab
 
 Optional Fields:
 
-+ Success Callback
-+ Failure Callback
++ Success Callback, called if claim action succeeds
++ Failure Callback, called if claim action doesn't succeed
