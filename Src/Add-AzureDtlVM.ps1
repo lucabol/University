@@ -79,7 +79,7 @@
     Add-AzureDtlVM -LabName University -VMCount 15 -ImageName "UnivImage" -TotalLabSize 15 -ExpirationTime "16:00" -DaysToExpiry 0 -location "centralus" -TimeZoneId "Central Standard Time"
 
 .EXAMPLE
-    Add-AzureDtlVM -LabName University -VMCount 15 -ImageName "UnivImage" -TotalLabSize 15 -TemplatePath ".\dtl_multivm_customimage.json" -ShutdownPath ".\dtl_shutdown.json"
+    Add-AzureDtlVM -LabName University -VMCount 15 -ImageName "UnivImage" -TotalLabSize 15 -TemplatePath "https://vlabresources.blob.core.windows.net/content/dtl_multivm_customimage.json" -ShutdownPath "https://vlabresources.blob.core.windows.net/content/dtl_shutdown.json"
 
 .NOTES
 
