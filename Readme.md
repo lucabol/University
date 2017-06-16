@@ -1,25 +1,15 @@
-# Cmdlets to create and cleanup labs
-The Src directory contains scripts to create a DTL class in a lab and to remove all VMs in a lab.
-The scripts need the lab to be created manually and for the correct image to be in the lab.
-Also, they require the creation of an Azure profile file, as detailed below.
+# University repository
+This repository has been created to collect the required material to set up DevTest Labs in Univerisities. This is useful both for IT admin and students because the former won't have to maintain physical machines, the latter will always have fresh machines available both for classes and self-service usage.
 
-## Sample usage
-Create 10 VMs in the Stats DTL lab using the UnivImage image.
+## Documentation folder
+This folder contains three useful files:
+- A video for a complete demo about setting up an entire environment on Azure DevTest Lab
+- A complete manual which describes the solution implemented and how to deploy the Azure DevTest Lab for both class and self-service scenario
+- An excel which helps in calculate an estimate of the price to run the solution
 
-    .\Add-AzureDtlVM.ps1 -LabName Stats -VMCount 10 -BaseImage UnivImage -ClassStart 12:00 -Duration 120 -CredentialsKind File
-
-Remove all VMs from the Stats DTL lab
-
-    .\Remove-AzureDtlVM -LabName Stats -CredentialsKind File
-
-The CredentialsKind parameter can have the value of 'File' to load credentails from a file or 'Runbook' if you are running the sript in a runbook. 
-For other parameters, look at the code.
-
-## Creating the appropriate Azure credential file to run the script in Class
-In 'powershell' do the following:
-
-    Login-AzureRmAccount
-    Set-AzureRmContext -SubscriptionId "XXXXX-XXXX-XXXX"
-    Save-AzureRMProfile -Path "$env:APPDATA\AzProfile.txt"
-
-This saves the credentials file where the scripts look for.
+## Src folder
+This folder contains:
+- Powershell scripts file which needs to be run either via Console or via Automation account on Azure to set up the environments for the imagined scenarios.
+- Roles folder which contains the json file which specifies the actions that a University user can take on a VM
+- Shutdown scripts folder which contains the scripts to automatically shutdown a VM if it's not used for a certain period of time
+- Simplifies JS portal contains the files needed to set a simplified portal for the students to claim a VM in an easier way
