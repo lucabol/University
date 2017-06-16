@@ -1,12 +1,13 @@
 ﻿<#
 .SYNOPSIS 
-    This script deallocates every Azure virtual machines which are stopped.
+    This script deallocates every stopped Azure virtual machines.
 
 .DESCRIPTION
-    This script deallocates every Azure virtual machines which are stopped in the specified DevTest Lab.
+    This script deallocates every Azure virtual machines which are stopped (i.e. the machine you stop from the OS and not
+    the Azure portal, therefore you still pay for it) in the specified DevTest Lab.
 
 .PARAMETER LabName
-    Mandatory. The name of the Dev Test Lab to clean up.
+    Mandatory. The name of the Dev Test Lab to run the machine deallocation on.
 
 .PARAMETER profilePath
     Optional. Path to file with Azure Profile.

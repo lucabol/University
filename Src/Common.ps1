@@ -344,8 +344,7 @@ function RemoveBatchVMs {
         Mandatory. Type of credential. Accepted values are "File" or "RunBook"
 
     .PARAMETER profilePath
-        Optional. Path to file with Azure Profile.
-        Default "$env:APPDATA\AzProfile.txt".
+        Mandatory. Path to file with Azure Profile.
 
     .NOTES
 

@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS 
-    This script removes the specified role to the AD Group in the specified DevTest Lab.
+    This script removes the specified role from the AD Group in the specified DevTest Lab.
 
 .DESCRIPTION
     This script allows IT admins to remove programmatically the permissions to access lab resources to a specific group associated to a specific role.
@@ -70,5 +70,5 @@ $ResourceGroupName = (Find-AzureRmResource -ResourceType "Microsoft.DevTestLab/l
 # get the ObjectId from the AD group name
 $objectId = Get-AzureRmADGroup -SearchString $ADGroupName
 
-# assign the role to the group for the specified lab
+# remove the role from the group for the specified lab
 Remove-AzureRmRoleAssignment -ObjectId $objectId.Id -Scope /subscriptions/$SubscriptionID/resourcegroups/$ResourceGroupName/providers/microsoft.devtestlab/labs/$labName -RoleDefinitionName $role

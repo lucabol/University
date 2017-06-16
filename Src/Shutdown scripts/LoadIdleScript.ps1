@@ -12,7 +12,7 @@
         Optional. The name of the container
 
     .PARAMETER SASToken
-        Optional. The name of the container
+        Optional. The name of the SAS token.
 
     .PARAMETER folder
         Optional. The name of the destination folder for the XML file

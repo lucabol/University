@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS 
-    This script adds the specified number of Azure virtual machines in the specified DevTest Lab.
+    This script adds the number of Azure virtual machines in the DevTest Lab.
 
 .DESCRIPTION
-    It allows the creation of the VMs inside a specific lab. This script needs to be scheduled for the creation of the VMs of each lab. 
+    It allows the creation of the VMs inside a specific lab. This script can be run either from command line or Azure Automation for the creation of the VMs of each lab. 
 
 .PARAMETER LabName
     Mandatory. Name of Lab.
@@ -15,18 +15,18 @@
     Mandatory. Name of base image in lab.
 
 .PARAMETER TotalLabSize
-    Mandatory. Desired total number of VMs in the lab.
+    Mandatory. Desired total number of VMs in the lab. If the lab already contains the TotalLabSize numebr of machines, it won't create more.
 
 .PARAMETER BatchSize
     Optional. How many VMs to create in each batch.
     Default 30.
 
 .PARAMETER TemplatePath
-    Optional. Path to the Deployment Template File.
+    Optional. Path to the Deployment Template File or URL of the template file when running from Azure Automation.
     Default ".\dtl_multivm_customimage.json".
 
 .PARAMETER ShutdownPath
-    Optional. Path to the Shutdown file.
+    Optional. Path to the Shutdown file or URL of the shutdown file when running from Azure Automation.
     Default ".\dtl_shutdown.json".
 
 .PARAMETER Size

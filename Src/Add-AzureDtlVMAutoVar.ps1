@@ -1,10 +1,9 @@
 <#
 .SYNOPSIS 
-    This script adds the specified number of Azure virtual machines in the specified DevTest Lab.
-    Read some parameters from AutomationVariable.
+    This script adds the number of Azure virtual machines in the DevTest Lab by reading some parameters from AutomationVariable.
 
 .DESCRIPTION
-    It allows the creation of the VMs inside a specific lab. This script needs to be scheduled for the creation of the VMs of each lab. 
+    It allows the creation of the VMs inside a specific lab. This script can be run either from command line or Azure Automation for the creation of the VMs of each lab. 
     Since this script uses some additional configuration parameters which don’t change for each scenario, you can avoid setting them. 
     Such parameters are set as “variables” in the Azure Automation account and they are loaded into the script when it is run as runbook. 
 
@@ -18,7 +17,7 @@
     Mandatory. Name of base image in lab.
 
 .PARAMETER TotalLabSize
-    Mandatory. Desired total number of VMs in the lab.
+    Mandatory. Desired total number of VMs in the lab. If the lab already contains the TotalLabSize numebr of machines, it won't create more.
 
 .PARAMETER DaysToExpiry
     Optional. How many days before expiring the VMs (-1 never, 0 today, 1 tomorrow, 2 ...) Defaults to tomorrow.

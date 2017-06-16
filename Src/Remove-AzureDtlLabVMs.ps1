@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS 
-    This script deletes every Azure virtual machines in the specified DevTest Lab.
+    This script deletes the Azure virtual machines with the passed Ids in the DevTest Lab.
 
 .DESCRIPTION
-    This script deletes every Azure virtual machines in the specified DevTest Lab. It will
+    This script deletes the Azure virtual machines with the passed Ids in the DevTest Lab. It will
     process all VMs in parallel divided into blocks.
 
 .PARAMETER ids
