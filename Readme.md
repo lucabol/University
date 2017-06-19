@@ -3,7 +3,7 @@ This repository has been created to collect the required material to set up DevT
 
 ## Documentation folder
 This folder contains three useful files:
-- A video for a complete demo about setting up an entire environment on Azure DevTest Lab (Documentation/DemoVirtualLab_Ita.mp4)
+- [A video for a complete demo about setting up an entire environment on Azure DevTest Lab] (Documentation/DemoVirtualLab_Ita.mp4)
 - A complete manual which describes the solution implemented and how to deploy the Azure DevTest Lab for both class and self-service scenario
 - An excel which helps in calculate an estimate of the price to run the solution
 
