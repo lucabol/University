@@ -21,7 +21,7 @@ This folder contains:
     - [Remove-GroupPermissionsDevTestLab](University/Src/Remove-GroupPermissionsDevTestLab.ps1): This script removes the specified role from the AD Group in the DevTest Lab.
     - [Test-AzureDtlVMs](University/Src/Test-AzureDtlVMs.ps1): Given LabName and LabSize, this script verifies how many Azure virtual machines are inside the DevTest Lab and throws an error inside the logs when the number is greater or lower than size +/- VMDelta. 
 - [Roles folder which contains the json file which specifies the actions that a University user can take on a VM](Src/Roles)
-- [Shutdown scripts folder which contains the scripts to automatically shutdown a VM if it's not used for a certain period of time](Src/Shutdown scripts)
-    - [LoadIdleScript](Src/Shutdown scripts/LoadIdleScript.ps1): This script creates a task inside Windows Task Scheduler getting a file script from a blob storage.
-    - [ShutdownOnIdleV2](Src/Shutdown scripts/ShutdownOnIdleV2.ps1): This script shutdowns the machine if the user hasn't been active.
+- [Shutdown scripts folder which contains the scripts to automatically shutdown a VM if it's not used for a certain period of time](Src/Shutdown%20scripts)
+    - [LoadIdleScript](Src/Shutdown%20scripts/LoadIdleScript.ps1): This script creates a task inside Windows Task Scheduler getting a file script from a blob storage.
+    - [ShutdownOnIdleV2](Src/Shutdown%20scripts/ShutdownOnIdleV2.ps1): This script shutdowns the machine if the user hasn't been active.
 - [Simplifies JS portal contains the files needed to set a simplified portal for the students to claim a VM in an easier way](Src/SimplifiedJSPortal)
