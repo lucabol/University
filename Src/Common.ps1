@@ -387,7 +387,7 @@ function RemoveBatchVMs {
             $batch = @();
             $batch += $VM.ResourceId
             $RunbookNameParams.Add("Ids", $batch)
-            $RunbookNameParms.Add("profilePath", $profilePath)
+            $RunbookNameParams.Add("profilePath", $profilePath)
             # Loop here until a job was successfully submitted. Will stay in the loop until job has been submitted or an exception other than max allowed jobs is reached
             while ($true) {
                 try {
