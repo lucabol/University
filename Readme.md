@@ -1,25 +1,30 @@
-# Cmdlets to create and cleanup labs
-The Src directory contains scripts to create a DTL class in a lab and to remove all VMs in a lab.
-The scripts need the lab to be created manually and for the correct image to be in the lab.
-Also, they require the creation of an Azure profile file, as detailed below.
+# University repository
+This repository has been created to collect the required material to set up DevTest Labs in Univerisities. This is useful both for IT admin and students because the former won't have to maintain physical machines, the latter will always have fresh machines available both for classes and self-service usage.
 
-## Sample usage
-Create 10 VMs in the Stats DTL lab using the UnivImage image.
+## Documentation folder
+This folder contains three useful files:
+- [A video for a complete demo about setting up an entire environment on Azure DevTest Lab](Documentation/DemoVirtualLab_Ita.mp4)
+- [A complete manual which describes the solution implemented and how to deploy the Azure DevTest Lab for both class and self-service scenario](Documentation/VirtualLabManual.docx)
+- [An excel which helps in calculate an estimate of the price to run the solution](Documentation/DevTestLab-VMPriceEstimator.xlsx)
 
-    .\Add-AzureDtlVM.ps1 -LabName Stats -VMCount 10 -BaseImage UnivImage -ClassStart 12:00 -Duration 120 -CredentialsKind File
+## Src folder
+This folder contains:
+- [Powershell scripts file which needs to be run either via Console or via Automation account on Azure to set up the environments for the imagined scenarios.](University/Src)
+    - [Add-AzureDtlVM](University/Src/Add-AzureDtlVM.ps1): This script adds the specified number of Azure virtual machines to a DevTest Lab.
+    - [Add-AzureDtlVMAutoVar](University/Src/Add-AzureDtlVMAutoVar.ps1): This script adds the number of Azure virtual machines in the DevTest Lab by reading some parameters from AutomationVariable.
+    - [Add-GroupPermissionsDevTestLab](University/Src/Add-GroupPermissionsDevTestLab.ps1): This script adds the specified role to the AD Group in the DevTest Lab.
+    - [Common](University/Src/Common.ps1): This script contains many useful functions for the other scripts.
+    - [DeallocateStoppedVM](University/Src/DeallocateStoppedVM.ps1): This script deallocates every stopped Azure virtual machines.
+    - [Manage-AzureDtlFixedPool](University/Src/Manage-AzureDtlFixedPool.ps1): This script guarantees that the Virtual Machine pool of the Lab equals to the PoolSize specified as Azure Tag of Lab.
+    - [Remove-AzureDtlLabVMs](Remove-AzureDtlLabVMs.ps1): This script guarantees that the Virtual Machine pool of the Lab equals to the PoolSize specified as Azure Tag of Lab.
+    - [Remove-AzureDtlVM](University/Src/Remove-AzureDtlVM.ps1): This script deletes every Azure virtual machines in the DevTest Lab.
+    - [Remove-GroupPermissionsDevTestLab](University/Src/Remove-GroupPermissionsDevTestLab.ps1): This script removes the specified role from the AD Group in the DevTest Lab.
+    - [Test-AzureDtlVMs](University/Src/Test-AzureDtlVMs.ps1): Given LabName and LabSize, this script verifies how many Azure virtual machines are inside the DevTest Lab and throws an error inside the logs when the number is greater or lower than size +/- VMDelta. 
 
-Remove all VMs from the Stats DTL lab
+- [Roles folder which contains the json file which specifies the actions that a University user can take on a VM](Src/Roles)
 
-    .\Remove-AzureDtlVM -LabName Stats -CredentialsKind File
-
-The CredentialsKind parameter can have the value of 'File' to load credentails from a file or 'Runbook' if you are running the sript in a runbook. 
-For other parameters, look at the code.
-
-## Creating the appropriate Azure credential file to run the script in Class
-In 'powershell' do the following:
-
-    Login-AzureRmAccount
-    Set-AzureRmContext -SubscriptionId "XXXXX-XXXX-XXXX"
-    Save-AzureRMProfile -Path "$env:APPDATA\AzProfile.txt"
-
-This saves the credentials file where the scripts look for.
+- [Shutdown scripts folder which contains the scripts to automatically shutdown a VM if it's not used for a certain period of time](Src/Shutdown%20scripts)
+    - [LoadIdleScript](Src/Shutdown%20scripts/LoadIdleScript.ps1): This script creates a task inside Windows Task Scheduler getting a file script from a blob storage.
+    - [ShutdownOnIdleV2](Src/Shutdown%20scripts/ShutdownOnIdleV2.ps1): This script shutdowns the machine if the user hasn't been active.
+    
+- [Simplifies JS portal contains the files needed to set a simplified portal for the students to claim a VM in an easier way](Src/SimplifiedJSPortal)

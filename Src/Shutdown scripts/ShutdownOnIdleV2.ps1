@@ -1,4 +1,34 @@
-﻿ [CmdletBinding()]
+﻿ <#
+    .SYNOPSIS
+        This script shutdowns the machine if the user hasn't been active.
+
+    .DESCRIPTION
+        This script verifies if: the user is active, CPU and disk usage and shutsdown the machine if the user is no longer active.
+
+    .PARAMETER MaxIdleTime
+        Max allowed idle (in minutes)
+
+    .PARAMETER MonitoringIntervalTime
+        Interval for CPU and disk monitoring (in minutes). No more than 15 minutes
+
+    .PARAMETER timeout
+        Timeout before actual shutdown after shutdown trigger (in minutes). No more than 10 minutes
+
+    .PARAMETER cpuIdleThreshold
+        % cpu on idle 
+
+    .PARAMETER diskIdleThreshold
+        % disk on idle  
+    
+    .EXAMPLE
+        PS C:\> ShutdownOnIdleV2
+
+    .EXAMPLE
+        PS C:\> ShutdownOnIdleV2 -MaxIdleTime 120 -cpuIdleThreshold 80 -diskIdleThreshold 80
+
+#>
+ 
+ [CmdletBinding()]
 param
 (
     [Parameter(Mandatory=$false, HelpMessage="Max allowed idle (in minutes)")]
