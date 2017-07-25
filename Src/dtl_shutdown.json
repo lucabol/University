@@ -10,6 +10,10 @@
       "type": "string",
       "defaultValue": "06:00"
     },
+    "startupTime": {
+      "type": "string",
+      "defaultValue": "03:00"
+    },
     "timeZoneId": {
       "type": "string",
       "defaultValue": "Eastern Standard Time"
@@ -46,6 +50,34 @@
             },
             "dailyRecurrence": {
               "time": "[replace(parameters('shutDownTime'),':','')]"
+            }
+          }
+        },
+        {
+          "apiVersion": "2017-04-26-preview",
+          "name": "[concat(parameters('newLabName'), '/', 'LabVmAutoStart')]",
+          "location": "[resourceGroup().location]",
+          "type": "microsoft.devtestlab/labs/schedules",
+          "dependsOn": [
+            "[variables('labId')]"
+          ],
+          "properties": {
+            "status": "Enabled",
+            "timeZoneId": "[parameters('timeZoneId')]",
+            "weeklyRecurrence": {
+              "time": "[replace(parameters('startupTime'),':','')]",
+              "weekdays": [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday"
+              ]
+            },
+            "taskType": "LabVmsStartupTask",
+            "notificationSettings": {
+              "status": "Disabled",
+              "timeInMinutes": 15
             }
           }
         }

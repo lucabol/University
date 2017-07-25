@@ -69,6 +69,12 @@
     Optional. Shutdown time for the VMs in the lab. In form of 'HH:mm' in TimeZoneID timezone.
     Default $ExpirationTime.
 
+.PARAMETER StartupTime
+    Optional. Starting time for the VMS in the lab. In form of 'HH:mm' in TimeZoneID timezone. You need to set EnableStartupTime to $true as well.
+
+.PARAMETER EnableStartupTime
+    Optional. Set to $true to enable starting up of machine at startup time.
+
 .EXAMPLE
     Add-AzureDtlVM -LabName University -VMCount 50 -ImageName "UnivImage" -TotalLabSize 200
 
@@ -135,6 +141,12 @@ param
     [Parameter(Mandatory = $false, HelpMessage = "What time to expire the VMs at. Defaults to 3am. In form of 'HH:mm' in TimeZoneID timezone")]
     [string] $ExpirationTime = "03:00",
 
+    [Parameter(Mandatory = $false, HelpMessage = "What time to start the VMs at. In form of 'HH:mm' in TimeZoneID timezone")]
+    [string] $StartupTime = "02:30",
+
+    [Parameter(Mandatory = $false, HelpMessage = "What time to start the VMs at. In form of 'HH:mm' in TimeZoneID timezone")]
+    [bool] $EnableStartupTime = $false,
+   
     [Parameter(Mandatory = $false, HelpMessage = "Shutdown time for the VMs in the lab. In form of 'HH:mm' in TimeZoneID timezone")]
     [string] $ShutDownTime = $ExpirationTime       
 )
@@ -212,14 +224,19 @@ try {
     $ShutDownTimeHours = ([DateTime]$ShutDownTime).ToString("HHmm")
     LogOutput "Shutdown Time hours: $ShutdownTimeHours"
 
+    $StartupTimeHours = ([DateTime]$StartupTime).ToString("HHmm")
+    LogOutput "Shutdown Time hours: $StartupTimeHours"
+
     LogOutput "Start deployment of Shutdown time ..."
     $shutParams = @{
         newLabName   = $LabName
         shutDownTime = $ShutDownTimeHours
+        startupTime = $StartupTimeHours
         timeZoneId   = $TimeZoneId
     }
     New-AzureRmResourceGroupDeployment -Name $shutDeployment -ResourceGroupName $ResourceGroupName -TemplateFile $ShutdownPath -TemplateParameterObject $shutParams | Write-Verbose
     LogOutput "Shutdown time deployed."
+    exit 1
 
     # Check that the Lab is not already full
     [array] $vms = GetAllLabVMsExpanded -LabName $LabName
