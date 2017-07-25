@@ -25,5 +25,9 @@
         "bulkCreationParameters": {
             "instanceCount": __Count__
         }
+    },
+    "tags": 
+    {
+        "AutoStartOn": "__EnableStartupTime__"
     }
 }

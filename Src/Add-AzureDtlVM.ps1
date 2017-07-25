@@ -236,7 +236,6 @@ try {
     }
     New-AzureRmResourceGroupDeployment -Name $shutDeployment -ResourceGroupName $ResourceGroupName -TemplateFile $ShutdownPath -TemplateParameterObject $shutParams | Write-Verbose
     LogOutput "Shutdown time deployed."
-    exit 1
 
     # Check that the Lab is not already full
     [array] $vms = GetAllLabVMsExpanded -LabName $LabName
@@ -277,6 +276,7 @@ try {
             SubscriptionId     = $SubscriptionId
             TimeZoneId         = $TimeZoneId
             VirtualNetworkName = $VNetName
+            EnableStartupTime  = If ($EnableStartupTime) {"true"} Else {"false"}
         }
 
         $loops = [math]::Floor($VMCount / $BatchSize)
