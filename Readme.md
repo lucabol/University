@@ -29,3 +29,12 @@ This folder contains:
     - [ShutdownOnIdleV2](Src/Shutdown%20scripts/ShutdownOnIdleV2.ps1): This script shutdowns the machine if the user hasn't been active.
     
 - [Simplifies JS portal contains the files needed to set a simplified portal for the students to claim a VM in an easier way](Src/SimplifiedJSPortal)
+
+## Creating the appropriate Azure credential file to run the scripts from command line
+In 'powershell' do the following:
+
+    Login-AzureRmAccount
+    Set-AzureRmContext -SubscriptionId "XXXXX-XXXX-XXXX"
+    Save-AzureRMProfile -Path "$env:APPDATA\AzProfile.txt"
+
+This saves the credentials file in the location on disk where the script look for by default.

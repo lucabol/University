@@ -16,7 +16,7 @@
     Default "University DevTest Labs User".
 
 .PARAMETER profilePath
-    Optional. Path to file with Azure Profile.
+    Optional. Path to file with Azure Profile. How to generate this file is explained at the end of the Readme for the repo (https://github.com/lucabol/University).
     Default "$env:APPDATA\AzProfile.txt".
 
 .EXAMPLE

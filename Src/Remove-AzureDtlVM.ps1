@@ -10,8 +10,8 @@
     Mandatory. The name of the Dev Test Lab to clean up.
 
 .PARAMETER profilePath
-    Optional. Path to file with Azure Profile.
-    Default is "$env:APPDATA\AzProfile.txt"
+    Optional. Path to file with Azure Profile. How to generate this file is explained at the end of the Readme for the repo (https://github.com/lucabol/University).
+    Default "$env:APPDATA\AzProfile.txt".
 
 .PARAMETER batchSize
     Optional. How many VMs to delete in parallel
