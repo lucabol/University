@@ -31,6 +31,12 @@
     Optional. Shutdown time for the VMs in the lab. In form of 'HH:mm' in TimeZoneID timezone.
     Default $ExpirationTime.
 
+.PARAMETER StartupTime
+    Optional. Starting time for the VMS in the lab. In form of 'HH:mm' in TimeZoneID timezone. You need to set EnableStartupTime to $true as well.
+
+.PARAMETER EnableStartupTime
+    Optional. Set to $true to enable starting up of machine at startup time.
+
 .EXAMPLE
     Add-AzureDtlVM -LabName University -VMCount 50 -ImageName "UnivImage" -TotalLabSize 200
 
@@ -62,7 +68,13 @@ param
     [string] $ExpirationTime = "03:00",
 
     [Parameter(Mandatory = $false, HelpMessage = "Shutdown time for the VMs in the lab. In form of 'HH:mm' in TimeZoneID timezone")]
-    [string] $ShutDownTime = $ExpirationTime
+    [string] $ShutDownTime = $ExpirationTime,
+
+    [Parameter(Mandatory = $false, HelpMessage = "What time to start the VMs at. In form of 'HH:mm' in TimeZoneID timezone")]
+    [string] $StartupTime = "02:30",
+
+    [Parameter(Mandatory = $false, HelpMessage = "What time to start the VMs at. In form of 'HH:mm' in TimeZoneID timezone")]
+    [bool] $EnableStartupTime = $false
 )
 
 trap {
@@ -89,6 +101,8 @@ try {
 
     . .\Add-AzureDtlVM.ps1 -LabName $LabName -VMCount $VMCount -ImageName $ImageName -ShutDownTime $ShutDownTime -TotalLabSize $TotalLabSize `
         -ShutdownPath $ShutdownPath -TemplatePath $TemplatePath -VNetName $VNetName -SubnetName $SubnetName -Size $Size -ExpirationTime $ExpirationTime -DaysToExpiry $DaysToExpiry
+        -StartupTime $StartupTime -EnableStartupTime $EnableStartupTime
+        
 } finally {
     if ($credentialsKind -eq "File") {
         1..3 | % { [console]::beep(2500, 300) } # Make a sound to indicate we're done if running from command line.
