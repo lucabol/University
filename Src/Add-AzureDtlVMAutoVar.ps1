@@ -74,7 +74,7 @@ param
     [string] $StartupTime = "02:30",
 
     [Parameter(Mandatory = $false, HelpMessage = "What time to start the VMs at. In form of 'HH:mm' in TimeZoneID timezone")]
-    [bool] $EnableStartupTime = $false
+    [switch] $EnableStartupTime
 )
 
 trap {
@@ -102,7 +102,7 @@ try {
     . .\Add-AzureDtlVM.ps1 -LabName $LabName -VMCount $VMCount -ImageName $ImageName -ShutDownTime $ShutDownTime -TotalLabSize $TotalLabSize `
         -ShutdownPath $ShutdownPath -TemplatePath $TemplatePath -VNetName $VNetName -SubnetName $SubnetName -Size $Size -ExpirationTime $ExpirationTime -DaysToExpiry $DaysToExpiry
         -StartupTime $StartupTime -EnableStartupTime $EnableStartupTime
-        
+
 } finally {
     if ($credentialsKind -eq "File") {
         1..3 | % { [console]::beep(2500, 300) } # Make a sound to indicate we're done if running from command line.
