@@ -103,6 +103,7 @@ try {
         -ShutdownPath $ShutdownPath -TemplatePath $TemplatePath -VNetName $VNetName -SubnetName $SubnetName -Size $Size -ExpirationTime $ExpirationTime -DaysToExpiry $DaysToExpiry `
         -StartupTime $StartupTime -EnableStartupTime $EnableStartupTime
 
+
 } finally {
     if ($credentialsKind -eq "File") {
         1..3 | % { [console]::beep(2500, 300) } # Make a sound to indicate we're done if running from command line.
