@@ -101,7 +101,7 @@ try {
 
     . .\Add-AzureDtlVM.ps1 -LabName $LabName -VMCount $VMCount -ImageName $ImageName -ShutDownTime $ShutDownTime -TotalLabSize $TotalLabSize `
         -ShutdownPath $ShutdownPath -TemplatePath $TemplatePath -VNetName $VNetName -SubnetName $SubnetName -Size $Size -ExpirationTime $ExpirationTime -DaysToExpiry $DaysToExpiry
-        -StartupTime $StartupTime -EnableStartupTime $EnableStartupTime
+        -StartupTime $StartupTime -EnableStartupTime:$EnableStartupTime
 
 } finally {
     if ($credentialsKind -eq "File") {
