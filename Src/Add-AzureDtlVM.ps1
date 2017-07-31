@@ -145,7 +145,7 @@ param
     [string] $StartupTime = "02:30",
 
     [Parameter(Mandatory = $false, HelpMessage = "What time to start the VMs at. In form of 'HH:mm' in TimeZoneID timezone")]
-    [switch] $EnableStartupTime,
+    [boolean] $EnableStartupTime,
    
     [Parameter(Mandatory = $false, HelpMessage = "Shutdown time for the VMs in the lab. In form of 'HH:mm' in TimeZoneID timezone")]
     [string] $ShutDownTime = $ExpirationTime       
@@ -276,7 +276,7 @@ try {
             SubscriptionId     = $SubscriptionId
             TimeZoneId         = $TimeZoneId
             VirtualNetworkName = $VNetName
-            EnableStartupTime  = If ($EnableStartupTime.IsPresent) {"true"} Else {"false"}
+            EnableStartupTime  = If ($EnableStartupTime) {"true"} Else {"false"}
         }
 
         $loops = [math]::Floor($VMCount / $BatchSize)
