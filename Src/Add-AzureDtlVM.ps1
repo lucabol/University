@@ -144,7 +144,7 @@ param
     [Parameter(Mandatory = $false, HelpMessage = "What time to start the VMs at. In form of 'HH:mm' in TimeZoneID timezone")]
     [string] $StartupTime = "02:30",
 
-    [Parameter(Mandatory = $false, HelpMessage = "What time to start the VMs at. In form of 'HH:mm' in TimeZoneID timezone")]
+    [Parameter(Mandatory = $false, HelpMessage = "Set to true to enable starting up of machine at startup time.")]
     [boolean] $EnableStartupTime,
    
     [Parameter(Mandatory = $false, HelpMessage = "Shutdown time for the VMs in the lab. In form of 'HH:mm' in TimeZoneID timezone")]
