@@ -69,19 +69,22 @@ param
     [string] $ImageName,
 
     [Parameter(Mandatory = $false, HelpMessage = "How many VMs to create in each batch")]
-    [int] $BatchSize = 50,
+    [int] $BatchSize = 30,
 
     [Parameter(Mandatory = $false, HelpMessage = "Path to the Deployment Template File")]
     [string] $TemplatePath = ".\dtl_multivm_customimage.json",
 
+    [Parameter(Mandatory = $false, HelpMessage = "Path to the Shutdown file")]
+    [string] $ShutdownPath = ".\dtl_shutdown.json",
+
     [Parameter(Mandatory = $false, HelpMessage = "Size of VM image")]
-    [string] $Size = "Standard_DS2",    
+    [string] $Size = "Standard_DS2_v2",    
 
     [Parameter(Mandatory = $false, HelpMessage = "Prefix for new VMs")]
     [string] $VMNameBase = "vm",
 
     [Parameter(Mandatory = $false, HelpMessage = "Virtual Network Name")]
-    [string] $VNetName = "dtl$LabName",
+    [string] $VNetName = "dtl" + $LabName,
 
     [Parameter(Mandatory = $false, HelpMessage = "SubNetName")]
     [string] $SubnetName = "dtl" + $LabName + "SubNet",
@@ -93,7 +96,22 @@ param
     [string] $TimeZoneId = "Central European Standard Time",
 
     [Parameter(Mandatory = $false, HelpMessage = "Path to file with Azure Profile")]
-    [string] $profilePath = "$env:APPDATA\AzProfile.txt"
+    [string] $profilePath = "$env:APPDATA\AzProfile.txt",
+
+    [Parameter(Mandatory = $false, HelpMessage = "How many days before expiring the VMs (-1 never, 0 today, 1 tomorrow, 2 .... Defaults to tomorrow.")]
+    [int] $DaysToExpiry = 1,
+
+    [Parameter(Mandatory = $false, HelpMessage = "What time to expire the VMs at. Defaults to 3am. In form of 'HH:mm' in TimeZoneID timezone")]
+    [string] $ExpirationTime = "03:00",
+
+    [Parameter(Mandatory = $false, HelpMessage = "What time to start the VMs at. In form of 'HH:mm' in TimeZoneID timezone")]
+    [string] $StartupTime = "02:30",
+
+    [Parameter(Mandatory = $false, HelpMessage = "Set to true to enable starting up of machine at startup time.")]
+    [boolean] $EnableStartupTime,
+   
+    [Parameter(Mandatory = $false, HelpMessage = "Shutdown time for the VMs in the lab. In form of 'HH:mm' in TimeZoneID timezone")]
+    [string] $ShutDownTime = $ExpirationTime       
 
 )
 
@@ -133,8 +151,10 @@ try {
     $depTime = (Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmss")
     LogOutput "StartTime: $depTime"
     $deploymentName = "Deployment_$LabName_$depTime"
-
+    $shutDeployment = $deploymentName + "Shutdown"
     LogOutput "Deployment Name: $deploymentName"
+    LogOutput "Shutdown Deployment Name: $shutDeployment"
+    LogOutput "Shutdown time: $ShutDownTime"
 
     $azVer = GetAzureModuleVersion
     if ($azVer -ge "3.8.0") {
@@ -180,10 +200,39 @@ try {
 
     LogOutput "Lab $LabName, Total VMS:$($vms.count), Failed:$($failedVms.count), Claimed:$($claimedVms.count), PoolSize: $poolSize, ToCreate: $vmToCreate"
 
-    # Never expire 
-    # TODO: change template not to have expiry date
-    # REPLY TO TODO: Currently, we cannot delete $ExpirationDate from dtl_multivm_customimage.json because it's used from all other scripts that require this field.
-    $ExpirationDate = Get-date "3000-01-01"
+    # Set the expiration date. This needs to be passed to DevTestLab in UTC time, so it is converted to UTC from TimeZoneId time
+    if ($DaysToExpiry -lt 0) {
+        $DaysToExpiry = 365 * 100 # Expire in 100 years (aka never) 
+    }
+
+    $tz = [timezoneinfo]::FindSystemTimeZoneById($TimeZoneId)
+    $ExpiryDateTime = ([timezoneinfo]::ConvertTimeFromUtc([datetime]::UtcNow, $tz))
+    $ExpiryDateTime = $ExpiryDateTime.Date.AddDays($DaysToExpiry)
+    $Time = [System.Timespan]::Parse($ExpirationTime)
+    $ExpiryDateTime = $ExpiryDateTime.Add($Time)
+    
+    $ExpirationUtc = [system.timezoneinfo]::ConvertTimeToUtc($ExpiryDateTime, $tz)
+    if ($ExpirationUtc -le [DateTime]::UtcNow) {
+        throw "Expiration date $ShutDownDate (or in UTC $ExpirationUtc) must be in the future."
+    }
+    $ExpirationDate = $ExpirationUtc.ToString("yyyy-MM-ddTHH:mm:ss")
+    LogOutput "Expiration Date: $ExpirationDate"
+
+    $ShutDownTimeHours = ([DateTime]$ShutDownTime).ToString("HHmm")
+    LogOutput "Shutdown Time hours: $ShutdownTimeHours"
+
+    $StartupTimeHours = ([DateTime]$StartupTime).ToString("HHmm")
+    LogOutput "Startup Time hours: $StartupTimeHours"
+
+    LogOutput "Start deployment of Shutdown time ..."
+    $shutParams = @{
+        newLabName   = $LabName
+        shutDownTime = $ShutDownTimeHours
+        startupTime = $StartupTimeHours
+        timeZoneId   = $TimeZoneId
+    }
+    New-AzureRmResourceGroupDeployment -Name $shutDeployment -ResourceGroupName $ResourceGroupName -TemplateFile $ShutdownPath -TemplateParameterObject $shutParams | Write-Verbose
+    LogOutput "Shutdown time deployed."
 
     # Create VMs to refill the pool
     if ($vmToCreate -gt 0) {
@@ -199,6 +248,9 @@ try {
         $VMNameBase = $VMNameBase + $secondsFromBase.ToString()
         LogOutput "Base Name $VMNameBase"
 
+		# Select the correct storage type depending on the VM size
+        $StorageType = If (($Size -split "Standard_")[1] -like "*s*") {"Premium"} Else {"Standard"}
+
         $tokens = @{
             Count              = $BatchSize
             ExpirationDate     = $ExpirationDate
@@ -207,12 +259,14 @@ try {
             Location           = $location
             Name               = $VMNameBase
             ResourceGroupName  = $ResourceGroupName
-            ShutDownTime       = $ShutDownTime
+            ShutDownTime       = $ShutDownTimeHours
             Size               = $Size
             SubnetName         = $SubnetName
             SubscriptionId     = $SubscriptionId
             TimeZoneId         = $TimeZoneId
             VirtualNetworkName = $VNetName
+            EnableStartupTime  = If ($EnableStartupTime) {"true"} Else {"false"}
+			StorageType        = $StorageType
         }
 
         $loops = [math]::Floor($vmToCreate / $BatchSize)
