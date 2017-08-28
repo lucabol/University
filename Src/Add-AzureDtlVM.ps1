@@ -225,7 +225,7 @@ try {
     LogOutput "Shutdown Time hours: $ShutdownTimeHours"
 
     $StartupTimeHours = ([DateTime]$StartupTime).ToString("HHmm")
-    LogOutput "Shutdown Time hours: $StartupTimeHours"
+    LogOutput "Startup Time hours: $StartupTimeHours"
 
     LogOutput "Start deployment of Shutdown time ..."
     $shutParams = @{
@@ -262,6 +262,9 @@ try {
         $VMNameBase = $VMNameBase + $secondsFromBase.ToString()
         LogOutput "Base Name $VMNameBase"
 
+        # Select the correct storage type depending on the VM size
+        $StorageType = If (($Size -split "Standard_")[1] -like "*s*") {"Premium"} Else {"Standard"}
+
         $tokens = @{
             Count              = $BatchSize
             ExpirationDate     = $ExpirationDate
@@ -277,6 +280,7 @@ try {
             TimeZoneId         = $TimeZoneId
             VirtualNetworkName = $VNetName
             EnableStartupTime  = If ($EnableStartupTime) {"true"} Else {"false"}
+            StorageType        = $StorageType
         }
 
         $loops = [math]::Floor($VMCount / $BatchSize)

@@ -9,7 +9,7 @@
         "isAuthenticationWithSshKey": false,
         "labSubnetName": "__SubnetName__",
         "disallowPublicIpAddress": true,
-        "storageType": "Standard",
+        "storageType": "__StorageType__",
         "allowClaim": true,
         "expirationDate": "__ExpirationDate__",
         "networkInterface": {
