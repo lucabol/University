@@ -93,6 +93,7 @@ try {
         $VNetName = Get-AutomationVariable -Name 'VNetName'
         $SubnetName = Get-AutomationVariable -Name 'SubnetName'
         $Size = Get-AutomationVariable -Name 'Size'
+		$StorageType = Get-AutomationVariable -Name 'StorageType'
         $TemplatePath = Get-AutomationVariable -Name 'TemplatePath'
     }
     else {
@@ -100,7 +101,7 @@ try {
     }
 
     . .\Add-AzureDtlVM.ps1 -LabName $LabName -VMCount $VMCount -ImageName $ImageName -ShutDownTime $ShutDownTime -TotalLabSize $TotalLabSize `
-        -ShutdownPath $ShutdownPath -TemplatePath $TemplatePath -VNetName $VNetName -SubnetName $SubnetName -Size $Size -ExpirationTime $ExpirationTime -DaysToExpiry $DaysToExpiry `
+        -ShutdownPath $ShutdownPath -TemplatePath $TemplatePath -VNetName $VNetName -SubnetName $SubnetName -Size $Size -StorageType $StorageType -ExpirationTime $ExpirationTime -DaysToExpiry $DaysToExpiry `
         -StartupTime $StartupTime -EnableStartupTime $EnableStartupTime
 
 
