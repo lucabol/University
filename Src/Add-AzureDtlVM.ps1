@@ -33,6 +33,10 @@
     Optional. Size of VM image.
     Default "Standard_A2_v2".
 
+.PARAMETER StorageType
+	Optional. Type of storage
+	Default "Standard".
+
 .PARAMETER VMNameBase
     Optional. Prefix for new VMs.
     Default "vm".
@@ -115,7 +119,10 @@ param
     [string] $ShutdownPath = ".\dtl_shutdown.json",
 
     [Parameter(Mandatory = $false, HelpMessage = "Size of VM image")]
-    [string] $Size = "Standard_A2_v2",    
+    [string] $Size = "Standard_A2_v2",
+	
+	[Parameter(Mandatory = $false, HelpMessage = "Type of storage")]
+	[string] $StorageType = "Standard",
 
     [Parameter(Mandatory = $false, HelpMessage = "Prefix for new VMs")]
     [string] $VMNameBase = "vm",
@@ -261,9 +268,6 @@ try {
         $secondsFromBase = [math]::Floor($ticksFromBase / 10000000)
         $VMNameBase = $VMNameBase + $secondsFromBase.ToString()
         LogOutput "Base Name $VMNameBase"
-
-        # Select the correct storage type depending on the VM size
-        $StorageType = If (($Size -split "Standard_")[1] -like "*s*") {"Premium"} Else {"Standard"}
 
         $tokens = @{
             Count              = $BatchSize
