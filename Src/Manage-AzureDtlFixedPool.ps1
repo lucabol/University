@@ -13,7 +13,11 @@
 
 .PARAMETER BatchSize
     Optional. How many VMs to create in each batch.
-    Default 50.
+    Default 30.
+
+.PARAMETER MaxLabSize
+    Mandatory. The maximum number of VMs inside the lab.
+    Default 200.
 
 .PARAMETER TemplatePath
     Optional. Path to the Deployment Template File.
@@ -52,13 +56,13 @@
     Default "$env:APPDATA\AzProfile.txt".
 
 .EXAMPLE
-    Manage-AzureDtlFixedPool -LabName University -ImageName "UnivImage"
+    Manage-AzureDtlFixedPool -LabName University -ImageName "UnivImage" -MaxLabSize 100
 
 .EXAMPLE
-    Manage-AzureDtlFixedPool -LabName University -ImageName "UnivImage" -Size "Standard_A2_v2"
+    Manage-AzureDtlFixedPool -LabName University -ImageName "UnivImage" -MaxLabSize 100 -Size "Standard_A2_v2"
 
 .EXAMPLE
-    Manage-AzureDtlFixedPool -LabName University -ImageName "UnivImage" -location "centralus" -TimeZoneId "Central Standard Time" -BatchSize 30
+    Manage-AzureDtlFixedPool -LabName University -ImageName "UnivImage" -MaxLabSize 100 -location "centralus" -TimeZoneId "Central Standard Time" -BatchSize 30
 
 .NOTES
 
@@ -74,6 +78,9 @@ param
 
     [Parameter(Mandatory = $false, HelpMessage = "How many VMs to create in each batch")]
     [int] $BatchSize = 30,
+
+    [Parameter(Mandatory = $true, HelpMessage = "Maximum total number of VMs in the lab")]
+    [int] $MaxLabSize = 200,
 
     [Parameter(Mandatory = $false, HelpMessage = "Path to the Deployment Template File")]
     [string] $TemplatePath = ".\dtl_multivm_customimage.json",
@@ -137,8 +144,7 @@ try {
     $credentialsKind = InferCredentials
 
     if ($credentialsKind -eq "Runbook") {
-        $path = Get-AutomationVariable -Name 'TemplatePath'
-        $file = Invoke-WebRequest -Uri $path -UseBasicParsing
+        $file = Invoke-WebRequest -Uri $TemplatePath -UseBasicParsing
         $templateContent = $file.Content
     }
     else {
@@ -204,6 +210,12 @@ try {
 
     $availableVms = $vms.count - $claimedVms.count - $failedVms.count
     $vmToCreate = $poolSize - $availableVms
+
+    # If the total amount exceeds the MaxLabSize, it refills the lab up to the MaxLabSize
+    # It does not create VMs if the total amount exceeds the MaxLabSize
+    if ($vms.count+$vmToCreate -ge $MaxLabSize) {
+        $vmToCreate = $MaxLabSize - $vms.count
+    }
 
     LogOutput "Lab $LabName, Total VMS:$($vms.count), Failed:$($failedVms.count), Claimed:$($claimedVms.count), PoolSize: $poolSize, ToCreate: $vmToCreate"
 
