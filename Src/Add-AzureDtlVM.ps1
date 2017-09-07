@@ -247,14 +247,14 @@ try {
     # Check that the Lab is not already full
     [array] $vms = GetAllLabVMsExpanded -LabName $LabName
     [array] $failed = $vms | ? { $_.Properties.provisioningState -eq 'Failed' }
-    $MissingVMs = $TotalLabSize - $vms.count + $failedVms.count
+    $MissingVMs = $TotalLabSize - $vms.count + $failed.count
 
     # The script tries to create the minimum of what it was asked for and the missing VMs
     $VMCount = [math]::min($VMCount, $MissingVMs)
     # There could be few missing VMs, hence the size of batch can become more than VMs to create
     $BatchSize = [math]::min($BatchSize, $VMCount)
 
-    LogOutput "Lab $LabName, Total VMS:$($vms.count), Failed:$($failedVms.count), Missing: $MissingVMs, ToCreate: $VMCount, Batches of: $BatchSize"
+    LogOutput "Lab $LabName, Total VMS:$($vms.count), Failed:$($failed.count), Missing: $MissingVMs, ToCreate: $VMCount, Batches of: $BatchSize"
 
     if ($VMCount -gt 0) {
         LogOutput "Start creating VMs ..."
