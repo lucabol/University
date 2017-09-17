@@ -61,9 +61,12 @@ try {
 
     [array] $vms = GetAllLabVMsExpanded -LabName $LabName
     [array] $failedVms = $vms | ? { $_.Properties.provisioningState -eq 'Failed' }
-
+    [array] $claimedVms = $vms | ? { !$_.Properties.AllowClaim -and $_.Properties.OwnerObjectId }
+    
     $vmCount = $vms.Count
     $failedCount = $failedVms.Count
+
+    $claimableVms = $vmCount - $claimedVms.Count 
     $availableVMs = $vmCount - $failedCount
     Write-Output "Total Number of VMs: $vmCount, Failed VMs: $failedCount, Available VMs: $availableVMs"
 
@@ -71,9 +74,10 @@ try {
     $someFailed = $failedCount -ne 0
 
     if ($someFailed -or $wrongCount) {
-        Write-Error "VMs count: $availableVMs / $LabSize, Failed VMs: $FailedCount"
+        Write-Error "VMs count: $availableVMs / $LabSize, Claimable VMs: $claimableVms, Failed VMs: $FailedCount"
     }
     else {
+        Write-Output "VMs count: $availableVMs / $LabSize, Claimable VMs: $claimableVms"
         Write-Output "The lab is as expected"
     }
 
