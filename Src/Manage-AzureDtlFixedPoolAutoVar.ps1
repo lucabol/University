@@ -21,6 +21,10 @@
     Mandatory. The maximum number of VMs inside the lab.
     Default 200.
 
+.PARAMETER PoolSize
+	Optional. The size of the pool
+	Default 100
+
 .PARAMETER DaysToExpiry
     Optional. How many days before expiring the VMs (-1 never, 0 today, 1 tomorrow, 2 ...) Defaults to tomorrow.
     Default "1".
@@ -58,7 +62,10 @@ param
     [string] $ImageName,
 
     [Parameter(Mandatory = $true, HelpMessage = "Desired total number of VMs in the lab")]
-    [int] $MaxLabSize,
+    [int] $MaxLabSize = 200,
+
+	[Parameter(Mandatory = $false, HelpMessage = "Size of the pool")]
+    [int] $PoolSize = 100,
 
     [Parameter(Mandatory = $false, HelpMessage = "How many days before expiring the VMs (-1 never, 0 today, 1 tomorrow, 2 .... Defaults to tomorrow.")]
     [int] $DaysToExpiry = 1,
@@ -99,7 +106,7 @@ try {
         throw "This script just works under Azure Automation, and expects the variables in the code just above"
     }
 
-    . .\Manage-AzureDtlFixedPool.ps1 -LabName $LabName -ImageName $ImageName -MaxLabSize $MaxLabSize -ShutDownTime $ShutDownTime `
+    . .\Manage-AzureDtlFixedPool.ps1 -LabName $LabName -ImageName $ImageName -MaxLabSize $MaxLabSize -PoolSize $PoolSize -ShutDownTime $ShutDownTime `
         -ShutdownPath $ShutdownPath -TemplatePath $TemplatePath -VNetName $VNetName -SubnetName $SubnetName -Size $Size -StorageType $StorageType -ExpirationTime $ExpirationTime -DaysToExpiry $DaysToExpiry `
         -StartupTime $StartupTime -EnableStartupTime $EnableStartupTime
 

@@ -19,6 +19,10 @@
     Mandatory. The maximum number of VMs inside the lab.
     Default 200.
 
+.PARAMETER PoolSize
+	Optional. The size of the pool
+	Default 100
+
 .PARAMETER TemplatePath
     Optional. Path to the Deployment Template File.
     Default ".\dtl_multivm_customimage.json".
@@ -55,8 +59,9 @@
     Optional. Path to file with Azure Profile. How to generate this file is explained at the end of the Readme for the repo (https://github.com/lucabol/University).
     Default "$env:APPDATA\AzProfile.txt".
 
+
 .EXAMPLE
-    Manage-AzureDtlFixedPool -LabName University -ImageName "UnivImage" -MaxLabSize 100
+    Manage-AzureDtlFixedPool -LabName University -ImageName "UnivImage" -MaxLabSize 100 -PoolSize 100
 
 .EXAMPLE
     Manage-AzureDtlFixedPool -LabName University -ImageName "UnivImage" -MaxLabSize 100 -Size "Standard_A2_v2"
@@ -81,6 +86,9 @@ param
 
     [Parameter(Mandatory = $true, HelpMessage = "Maximum total number of VMs in the lab")]
     [int] $MaxLabSize = 200,
+
+	[Parameter(Mandatory = $false, HelpMessage = "Size of the pool")]
+    [int] $PoolSize = 100,
 
     [Parameter(Mandatory = $false, HelpMessage = "Path to the Deployment Template File")]
     [string] $TemplatePath = ".\dtl_multivm_customimage.json",
@@ -184,22 +192,9 @@ try {
 
     # Get size of the managed pool
     $Lab = GetLab -LabName $LabName
-    $poolSize = $null
-    # Hack for runbook
-    if ($credentialsKind -eq "Runbook") {
-        LogOutput "In runbook"
-        foreach ($tag in $Lab.Tags) {
-            if ($tag.ContainsValue("PoolSize")) {
-                $poolSize = $tag.Get_Item("Value")
-                break
-            }
-        }
-    }
-    else {
-        $poolSize = $Lab.Tags.PoolSize
-    }
-    if (! $poolSize) {
-        throw "The lab $LabName doesn't contain a PoolSize tag"
+
+    if ($PoolSize -lt 0) {
+        throw "$PoolSize cannot be a negative number"
     }
 
     LogOutput "Pool size: $poolSize"
@@ -209,7 +204,7 @@ try {
     [array] $claimedVms = $vms | ? { !$_.Properties.AllowClaim -and $_.Properties.OwnerObjectId }
 
     $availableVms = $vms.count - $claimedVms.count - $failedVms.count
-    $vmToCreate = $poolSize - $availableVms
+    $vmToCreate = $PoolSize - $availableVms
 
     # If the total amount exceeds the MaxLabSize, it refills the lab up to the MaxLabSize
     # It does not create VMs if the total amount exceeds the MaxLabSize
@@ -217,7 +212,7 @@ try {
         $vmToCreate = $MaxLabSize - $vms.count
     }
 
-    LogOutput "Lab $LabName, Total VMS:$($vms.count), Failed:$($failedVms.count), Claimed:$($claimedVms.count), PoolSize: $poolSize, ToCreate: $vmToCreate"
+    LogOutput "Lab $LabName, Total VMS:$($vms.count), Failed:$($failedVms.count), Claimed:$($claimedVms.count), PoolSize: $PoolSize, ToCreate: $vmToCreate"
 
     # Set the expiration date. This needs to be passed to DevTestLab in UTC time, so it is converted to UTC from TimeZoneId time
     if ($DaysToExpiry -lt 0) {
